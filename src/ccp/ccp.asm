@@ -70,10 +70,10 @@ CCPENT:
 ; Re-entry point after transient command
 CCPRET:
         LXI     SP, CCPSTK      ; Set up local stack
-        CALL    CRLF
 
 ; Main command loop
 CCPLP:
+        CALL    CRLF            ; New line before prompt
         CALL    GETDSK          ; Ensure disk is selected
         CALL    PROMPT          ; Display prompt
         CALL    RDCMD           ; Read command line
@@ -1008,18 +1008,8 @@ GETDSK:
 
 ; Output character in C
 OUTCHR:
-        MVI     A, B_CONOUT
-        MOV     C, A            ; Oops, this overwrites the char
-        ; Fix:
-        PUSH    B
-        MVI     C, B_CONOUT
-        POP     D               ; D has garbage, E has char
-        ; Actually let's redo this properly
-        ; Character is in C, we need C=function, E=char
-        PUSH    B               ; Save char in B (pushed as BC)
-        MVI     C, B_CONOUT
-        POP     D               ; Now E has the char (was C)
-        ; Hmm, POP D gives us BC into DE, so D=B, E=C - E has the char. Good!
+        MOV     E, C            ; E = character to output
+        MVI     C, B_CONOUT     ; C = function number
         CALL    ENTRY
         RET
 

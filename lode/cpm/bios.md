@@ -46,18 +46,17 @@ The BIOS provides hardware abstraction through a 17-entry jump table. This imple
 | 05h | Character in | Character out |
 
 ### Disk FDC
-| Port | Purpose |
-|------|---------|
-| 10h | Drive select (0-3) |
-| 11h | Track number |
-| 12h | Sector number |
-| 13h | Command: 0=read, 1=write |
-| 14h | Status: 0=OK, nonzero=error |
-| 15h | Disk type select |
-| 16h | DMA address low byte |
-| 17h | DMA address high byte |
+| Port (decimal) | Hex | Purpose |
+|----------------|-----|---------|
+| 10 | 0Ah | Drive select (0-3) |
+| 11 | 0Bh | Track number |
+| 12 | 0Ch | Sector number (low byte) |
+| 13 | 0Dh | Command: 0=read, 1=write |
+| 14 | 0Eh | Status: 0=OK, nonzero=error |
+| 15 | 0Fh | DMA address low byte |
+| 16 | 10h | DMA address high byte |
 
-**IMPORTANT**: These ports are based on z80pack cpmsim defaults. If boot fails, verify ports against your z80pack version's `iosim.c` source.
+**CRITICAL**: z80pack uses DECIMAL port numbers in source (simio.c line 300+). The hex equivalents above are for reference. Do NOT use `10H` in assembly - it means 16 decimal!
 
 ## Disk Parameter Header (DPH)
 

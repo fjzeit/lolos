@@ -10,14 +10,14 @@ BIOS    EQU     CCP+1600H
 
 NSECTS  EQU     48              ; Sectors to load
 
-; z80pack I/O ports
-FDCD    EQU     10H
-FDCT    EQU     11H
-FDCS    EQU     12H
-FDCOP   EQU     13H
-FDCST   EQU     14H
-DMAL    EQU     16H
-DMAH    EQU     17H
+; z80pack I/O ports (decimal values)
+FDCD    EQU     10              ; FDC drive select
+FDCT    EQU     11              ; FDC track
+FDCS    EQU     12              ; FDC sector (low)
+FDCOP   EQU     13              ; FDC command
+FDCST   EQU     14              ; FDC status
+DMAL    EQU     15              ; DMA address low
+DMAH    EQU     16              ; DMA address high
 
         ORG     0000H
 
@@ -31,6 +31,7 @@ BOOT:
         OUT     FDCT
 
         MVI     C, 2            ; Current sector
+        MVI     D, 0            ; Current track (must initialize!)
         LXI     H, CCP          ; Load address
         MVI     B, NSECTS       ; Sector count
 

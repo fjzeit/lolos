@@ -2,7 +2,7 @@
 
 A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) written in pure Intel 8080 assembly language. Fully bootable operating system targeting z80pack emulator.
 
-**Status**: Initial implementation complete, ready for testing
+**Status**: Boots successfully on z80pack (cpmsim)
 
 ## Design Decisions
 - **CPU**: Intel 8080 (no Z80 extensions, maximum compatibility)
@@ -19,16 +19,28 @@ A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) writt
 | BIOS | FA00h | 428 bytes |
 
 ## Build
-Run `build.bat` to assemble all components and create `drivea.dsk`.
+**Windows**: Run `build.bat`
+**Linux**:
+```bash
+./tools/zmac -8 --od src/boot --oo cim,lst src/boot/boot.asm
+./tools/zmac -8 --od src/bios --oo cim,lst src/bios/bios.asm
+./tools/zmac -8 --od src/bdos --oo cim,lst src/bdos/bdos.asm
+./tools/zmac -8 --od src/ccp --oo cim,lst src/ccp/ccp.asm
+python3 tools/mkdisk.py
+```
+
+## Testing
+Copy `drivea.dsk` to z80pack's `cpmsim/disks/` directory and run `./cpmsim`.
 
 ## Source Structure
 ```
 src/
-  boot/boot.asm   - Boot loader (64 bytes)
+  boot/boot.asm   - Boot loader (66 bytes)
   bios/bios.asm   - Hardware abstraction
   bdos/bdos.asm   - System calls
   ccp/ccp.asm     - Command processor
 tools/
-  zmac.exe        - Assembler
+  zmac            - Assembler (Linux binary)
+  zmac.exe        - Assembler (Windows)
   mkdisk.py       - Disk image creator
 ```

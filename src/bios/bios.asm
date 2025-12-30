@@ -27,15 +27,14 @@ PRTSTA  EQU     02H             ; Printer status port
 PRTDAT  EQU     03H             ; Printer data port
 AUXDAT  EQU     05H             ; Auxiliary data port
 
-; z80pack disk I/O ports
-FDCD    EQU     10H             ; FDC drive select
-FDCT    EQU     11H             ; FDC track
-FDCS    EQU     12H             ; FDC sector
-FDCOP   EQU     13H             ; FDC command (0=read, 1=write)
-FDCST   EQU     14H             ; FDC status
-DPTS    EQU     15H             ; Selected disk type
-DMAL    EQU     16H             ; DMA address low
-DMAH    EQU     17H             ; DMA address high
+; z80pack disk I/O ports (decimal values per simio.c)
+FDCD    EQU     10              ; FDC drive select
+FDCT    EQU     11              ; FDC track
+FDCS    EQU     12              ; FDC sector
+FDCOP   EQU     13              ; FDC command (0=read, 1=write)
+FDCST   EQU     14              ; FDC status
+DMAL    EQU     15              ; DMA address low
+DMAH    EQU     16              ; DMA address high
 
 ; Disk parameters for 8" SSSD (IBM 3740)
 NDISKS  EQU     4               ; Number of drives supported

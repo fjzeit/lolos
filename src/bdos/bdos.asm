@@ -294,6 +294,9 @@ F10LP:
         POP     H
         POP     B
 
+        ; Save character in E for later
+        MOV     E, A
+
         CPI     CR              ; End of line?
         JZ      F10DN
 
@@ -324,26 +327,25 @@ F10LP:
         CMP     B               ; At max?
         JNC     F10BEL          ; Ring bell if full
 
-        ; Store character
-        MOV     A, C            ; Get char back from earlier
-        MOV     M, A            ; This is wrong - need the input char
-        ; Fix: reload input char
-        ; Character was in A after CONINW, but we trashed it
-        ; Let's restructure
+        ; Store character in buffer
+        MOV     A, E            ; Get saved character
+        MOV     M, A            ; Store in buffer
+        INX     H               ; Advance buffer pointer
+        INR     C               ; Increment count
 
-        ; Actually store and echo
+        ; Echo the character
         PUSH    B
         PUSH    H
-        CALL    CONINW          ; Hmm, already called above
+        MOV     C, E            ; Character to echo
+        CALL    CONOUTW
         POP     H
         POP     B
-        ; This is getting complicated - let's simplify
-        JMP     F10LP           ; Placeholder - will fix
+        JMP     F10LP
 
 F10BEL:
-        MVI     C, 07H          ; Bell
-        PUSH    B
+        PUSH    B               ; Save count FIRST
         PUSH    H
+        MVI     C, 07H          ; Bell character
         CALL    CONOUTW
         POP     H
         POP     B
