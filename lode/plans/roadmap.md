@@ -57,8 +57,10 @@
 - [x] Fix TYPE command argument parsing (was using command name, not filename)
 - [x] Fix ERA command argument parsing (same issue)
 - [x] Fix HASWILD function (inverted logic)
-- [ ] Test SAVE command
-- [ ] Test file I/O with a program that reads/writes files
+- [x] Test SAVE command
+- [x] Test file I/O with fileio.com test program
+- [x] Fix BDOS WRITEREC - PUTBLOCK was corrupting HL (block number) before BLKTOSEC
+- [x] Fix BDOS SELDRIVE - ALV not initialized on first drive login
 - [ ] Test multi-extent files (files > 16K)
 
 ## Next Steps

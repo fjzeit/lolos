@@ -31,7 +31,9 @@ python3 tools/mkdisk.py
 ```
 
 ## Testing
-Copy `drivea.dsk` to z80pack's `cpmsim/disks/` directory and run `./cpmsim`.
+**Automated**: `python3 tests/run_tests.py` - runs 8 tests covering boot, commands, and file I/O
+
+**Manual**: Copy `drivea.dsk` to z80pack's `cpmsim/disks/` directory and run `./cpmsim`.
 
 ## Source Structure
 ```

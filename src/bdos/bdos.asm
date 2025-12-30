@@ -544,6 +544,15 @@ SELD1:
         DCR     C
         JMP     SELD1
 SELD2:
+        ; Check if already logged in
+        LDA     LOGINV
+        ANA     B
+        JNZ     SELD3           ; Already logged in, skip init
+        ; First login - initialize ALV
+        PUSH    B
+        CALL    INITALV
+        POP     B
+SELD3:
         LDA     LOGINV
         ORA     B
         STA     LOGINV
@@ -1419,7 +1428,9 @@ WRITEREC:
         ORA     L
         JZ      WRECERR         ; Disk full
         ; Store in FCB allocation map
+        PUSH    H               ; Save block number
         CALL    PUTBLOCK
+        POP     H               ; Restore block number
 WRECHB:
         CALL    BLKTOSEC
         MVI     C, 0            ; Normal write
@@ -1537,6 +1548,157 @@ ABLKFND:
 
 ABLKERR:
         LXI     H, 0
+        RET
+
+; Initialize allocation vector for current drive
+; Called when drive is first logged in
+INITALV:
+        ; Get ALV address from DPH
+        LHLD    CURDPH
+        LXI     D, 14           ; Offset to ALV pointer
+        DAD     D
+        MOV     E, M
+        INX     H
+        MOV     D, M
+        XCHG
+        SHLD    ALVPTR          ; Save ALV address
+
+        ; Get DSM from DPB to calculate ALV size
+        LHLD    CURDPH
+        LXI     D, 10           ; Offset to DPB pointer
+        DAD     D
+        MOV     E, M
+        INX     H
+        MOV     D, M
+        XCHG                    ; HL = DPB address
+        LXI     D, 5            ; Offset to DSM
+        DAD     D
+        MOV     E, M
+        INX     H
+        MOV     D, M            ; DE = DSM (max block number)
+
+        ; ALV size in bytes = (DSM / 8) + 1
+        MOV     A, E
+        RRC
+        RRC
+        RRC
+        ANI     1FH
+        MOV     C, A            ; Low part
+        MOV     A, D
+        RLC
+        RLC
+        RLC
+        RLC
+        RLC
+        ORA     C
+        INR     A               ; +1 for partial byte
+        MOV     B, A            ; B = bytes to clear
+
+        ; Clear ALV to zeros
+        LHLD    ALVPTR
+IALCLR:
+        MVI     M, 0
+        INX     H
+        DCR     B
+        JNZ     IALCLR
+
+        ; Mark directory blocks as used
+        ; Get AL0, AL1 from DPB which has pre-set bits for dir blocks
+        LHLD    CURDPH
+        LXI     D, 10
+        DAD     D
+        MOV     E, M
+        INX     H
+        MOV     D, M
+        XCHG                    ; HL = DPB
+        LXI     D, 9            ; Offset to AL0
+        DAD     D
+        MOV     A, M            ; AL0
+        INX     H
+        MOV     B, M            ; AL1
+        LHLD    ALVPTR
+        MOV     M, A            ; Store AL0
+        INX     H
+        MOV     M, B            ; Store AL1
+
+        ; Now scan directory and mark blocks as used
+        XRA     A
+        STA     SEARCHI
+IALSCAN:
+        LDA     SEARCHI
+        ; Calculate sector and entry
+        MOV     B, A
+        ANI     03H
+        STA     DIRENT
+        MOV     A, B
+        RRC
+        RRC
+        ANI     3FH
+        STA     DIRSEC
+
+        ; Check if past end of directory
+        LHLD    CURDPH
+        LXI     D, 10
+        DAD     D
+        MOV     E, M
+        INX     H
+        MOV     D, M
+        XCHG                    ; HL = DPB
+        LXI     D, 7            ; Offset to DRM
+        DAD     D
+        MOV     E, M
+        INX     H
+        MOV     D, M            ; DE = DRM (max dir entry)
+        LDA     SEARCHI
+        MOV     L, A
+        MVI     H, 0
+        ; Compare HL with DE
+        MOV     A, L
+        SUB     E
+        MOV     A, H
+        SBB     D
+        JNC     IALDON          ; Past directory end
+
+        ; Read directory sector
+        LDA     DIRSEC
+        CALL    READDIR
+
+        ; Get pointer to entry
+        CALL    GETDIRENT
+        MOV     A, M            ; First byte = user number or E5
+        CPI     0E5H
+        JZ      IALNXT          ; Empty entry, skip
+
+        ; Valid entry - mark its blocks as used
+        PUSH    H
+        LXI     D, 16           ; Offset to allocation map
+        DAD     D
+        MVI     C, 16           ; 16 block pointers (8-bit each)
+IALBLK:
+        MOV     A, M
+        ORA     A
+        JZ      IALBN           ; Zero = unused
+        ; Mark block A as used
+        PUSH    H
+        PUSH    B
+        MOV     L, A
+        MVI     H, 0
+        CALL    SETBIT
+        POP     B
+        POP     H
+IALBN:
+        INX     H
+        DCR     C
+        JNZ     IALBLK
+        POP     H
+
+IALNXT:
+        LDA     SEARCHI
+        INR     A
+        STA     SEARCHI
+        JMP     IALSCAN
+
+IALDON:
         RET
 
 ; Get bit for block HL in ALV

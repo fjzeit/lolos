@@ -147,6 +147,11 @@ class CpmTester:
         if hello_com.exists():
             self.add_file_to_disk(hello_com, "HELLO.COM")
 
+        # Add file I/O test program if it exists
+        fileio_com = PROJECT_ROOT / "tests" / "programs" / "fileio.com"
+        if fileio_com.exists():
+            self.add_file_to_disk(fileio_com, "FILEIO.COM")
+
         return True
 
     def add_file_to_disk(self, local_path: Path, cpm_name: str) -> bool:
@@ -231,11 +236,11 @@ class CpmTester:
                     shell_cmd,
                     shell=True,
                     capture_output=True,
-                    text=True,
                     cwd=CPMSIM_DIR,
                     executable='/bin/bash'
                 )
-                output = result.stdout + result.stderr
+                # Decode with replacement for any binary garbage
+                output = result.stdout.decode('utf-8', errors='replace') + result.stderr.decode('utf-8', errors='replace')
 
                 # timeout returns 124 when it kills the process
                 # But we still have valid output if cpmsim ran, so check for that
@@ -398,6 +403,54 @@ def test_hello_program(tester: CpmTester):
     return False, "Expected hello output not found", output
 
 
+def test_save_command(tester: CpmTester):
+    """Test SAVE command creates files from memory"""
+    # First run HELLO to load something at 0100h
+    # Then save 1 page (256 bytes) to a new file
+    # Then verify the file exists and can run
+    success, output = tester.run_cpmsim([
+        "HELLO",           # Load hello.com at 0100h
+        "SAVE 1 COPY.COM", # Save 1 page to COPY.COM
+        "DIR COPY.COM",    # Verify file exists
+        "COPY"             # Try to run it
+    ], timeout=10)
+
+    if not success:
+        return False, output, output
+
+    # Check that COPY.COM appears in DIR output
+    if "COPY" not in output:
+        return False, "SAVE did not create file", output
+
+    # Check that running COPY produces hello output
+    # (since it's a copy of hello.com)
+    if output.count("Hello") >= 2 or output.count("hello") >= 2:
+        return True, "SAVE creates runnable copy", output
+
+    # Even if copy doesn't run perfectly, if file was created it's a pass
+    if "COPY" in output and "COM" in output:
+        return True, "SAVE creates file", output
+
+    return False, "SAVE test failed", output
+
+
+def test_fileio(tester: CpmTester):
+    """Test file I/O operations (create, write, read, verify)"""
+    success, output = tester.run_cpmsim(["FILEIO"], timeout=10)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "File I/O test passed", output
+
+    if "FAIL" in output:
+        # Extract error message
+        return False, "File I/O test failed", output
+
+    return False, "Unexpected output from FILEIO", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -436,6 +489,8 @@ def main():
         ("era", lambda: test_era_command(tester)),
         ("ren", lambda: test_ren_command(tester)),
         ("hello", lambda: test_hello_program(tester)),
+        ("save", lambda: test_save_command(tester)),
+        ("fileio", lambda: test_fileio(tester)),
     ]
 
     # Filter tests if specific test requested

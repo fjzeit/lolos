@@ -82,6 +82,20 @@ When SEARCH finds a match, it must save the directory entry pointer to `DIRPTR` 
 ### Register Preservation Contract
 BDOS may corrupt HL (used for return values) but callers expect BC/DE to be preserved. Internal utilities like OUTCHR and BDOSCL should preserve HL/BC for caller convenience.
 
+### WRITEREC Block Handling
+When WRITEREC needs to allocate a new block:
+1. GETBLOCK returns HL=0 (no block)
+2. ALLOCBLK returns HL=new block number
+3. PUTBLOCK stores block in FCB but **destroys HL**
+4. Must preserve HL before PUTBLOCK: `PUSH H / CALL PUTBLOCK / POP H`
+5. Then BLKTOSEC uses correct block number
+
+### ALV Initialization
+The Allocation Vector (ALV) must be initialized on first drive login:
+- SELDRIVE checks LOGINV to see if drive already logged in
+- If not, calls INITALV before setting login bit
+- INITALV clears ALV, sets AL0/AL1 bits, then scans directory to mark used blocks
+
 ## Related
 - [filesystem.md](filesystem.md) - FCB structure and directory format
 - [bios.md](bios.md) - Low-level I/O calls

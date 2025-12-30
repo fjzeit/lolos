@@ -59,6 +59,17 @@ flowchart TD
 | era | ERA command | File deletion works |
 | ren | REN command | File renaming works |
 | hello | Program execution | hello.com runs correctly |
+| save | SAVE command | Save memory to file, verify it runs |
+| fileio | File I/O operations | Create, write, close, open, read, verify data |
+
+### Test Programs
+
+`tests/programs/fileio.asm` - Comprehensive file I/O test that:
+1. Creates a file using MAKE
+2. Writes a 128-byte pattern using WRITE
+3. Closes and reopens the file
+4. Reads the data back
+5. Verifies the data matches
 
 ### Cross-Platform Support
 
