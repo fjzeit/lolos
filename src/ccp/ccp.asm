@@ -170,10 +170,13 @@ PARSC2:
         DCR     B
         JNZ     PARSC2
 
-        ; Parse first name
+        ; Parse first name (command name)
         LXI     H, DBUFF+1      ; Source
         LXI     D, DFCB         ; Destination FCB
         CALL    PARFCB
+
+        ; Save pointer to command tail (arguments)
+        SHLD    CMDTAIL
 
         ; Skip spaces
 PARSK1:
@@ -525,15 +528,87 @@ EXTRUN:
         MVI     C, B_SETDMA
         CALL    BDOSCL
 
-        ; Copy command tail to DBUFF
-        ; (Already there from RDCMD, but need to skip command name)
-        ; For simplicity, we'll leave what's there
-
-        ; Set up FCB for program
+        ; Copy command tail (arguments only) to DBUFF
+        ; CMDTAIL points to after the command name
+        LHLD    CMDTAIL
+        LXI     D, DBUFF+1      ; Destination (skip length byte)
+        MVI     B, 0            ; Length counter
+EXTCPY:
+        MOV     A, M
+        ORA     A
+        JZ      EXTCDN          ; Null = end
+        CPI     CR
+        JZ      EXTCDN          ; CR = end
+        STAX    D
+        INX     H
+        INX     D
+        INR     B
+        JMP     EXTCPY
+EXTCDN:
+        ; Store length and terminate
+        MOV     A, B
+        STA     DBUFF           ; Length byte
         XRA     A
-        STA     DFCB+12         ; Clear extent
-        STA     DFCB+32         ; Clear CR
+        STAX    D               ; Null terminate
 
+        ; Set up FCBs for program - re-parse command tail
+        ; First clear both FCBs
+        LXI     H, DFCB
+        MVI     B, 36
+        XRA     A
+EXCLR1:
+        MOV     M, A
+        INX     H
+        DCR     B
+        JNZ     EXCLR1
+
+        LXI     H, DFCB2
+        MVI     B, 16
+        XRA     A
+EXCLR2:
+        MOV     M, A
+        INX     H
+        DCR     B
+        JNZ     EXCLR2
+
+        ; Parse command tail into FCBs
+        ; CMDTAIL points to after the command name
+        ; Skip leading spaces first
+        LHLD    CMDTAIL
+EXSKLD:
+        MOV     A, M
+        ORA     A
+        JZ      EXNOARG         ; Null = no arguments
+        CPI     CR
+        JZ      EXNOARG         ; CR = no arguments
+        CPI     ' '
+        JNZ     EXARG1          ; Non-space = start of argument
+        INX     H
+        JMP     EXSKLD
+EXARG1:
+        ; Parse first argument
+        LXI     D, DFCB
+        CALL    PARFCB
+
+        ; Parse second argument (HL advanced by PARFCB)
+        MOV     A, M
+        ORA     A
+        JZ      EXNOARG
+        CPI     ' '
+        JZ      EXSKSP
+        JMP     EXPAR2
+EXSKSP:
+        INX     H
+        MOV     A, M
+        ORA     A
+        JZ      EXNOARG
+        CPI     ' '
+        JZ      EXSKSP
+EXPAR2:
+        LXI     D, DFCB2
+        CALL    PARFCB
+
+EXNOARG:
         ; Jump to program
         LDA     CURDSK
         MOV     C, A
@@ -1158,6 +1233,7 @@ MSGCNF: DB      'All (Y/N)?$'
 CURDSK: DS      1               ; Current disk
 LOADAD: DS      2               ; Load address for transient
 SAVPGS: DS      1               ; Pages to save
+CMDTAIL: DS     2               ; Pointer to command tail (after command name)
 
 CMDBUF: DS      129             ; Command input buffer
 

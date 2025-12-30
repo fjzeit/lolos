@@ -65,11 +65,13 @@
 - [x] Fix BDOS FUNC15/16 extent matching (was only matching filename, not extent)
 - [x] Fix BDOS FUNC20 extent transition (load next extent's allocation map on read)
 - [x] Fix BDOS FUNC21 extent overflow (close current, create new directory entry)
+- [x] Fix CCP command tail setup (DBUFF and FCB must contain only arguments, not command name)
 
 ## Next Steps
 
 ### Phase 11: Compatibility Testing
-- [ ] Test MBASIC
+- [x] Test BBC BASIC - works (FOR/NEXT, PRINT, program entry)
+- [x] Test MBASIC - works (loads, runs)
 - [ ] Test WordStar or similar
 - [ ] Test Turbo Pascal or other compilers
 - [ ] Fix compatibility issues

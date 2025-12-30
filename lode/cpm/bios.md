@@ -86,6 +86,22 @@ DPB:    DW  26          ; SPT - sectors per track
         DW  2           ; OFF - reserved tracks
 ```
 
+## Terminal Compatibility
+
+Modern terminals send DEL (7Fh) for backspace, but CP/M programs handle DEL and BS differently:
+- DEL (7Fh) → "rubout" with backslash echo (teletype style)
+- BS (08h) → visual backspace
+
+CONIN converts DEL to BS so programs like MBASIC do visual backspace:
+```asm
+CONIN:
+        ...
+        CPI     7FH             ; DEL?
+        RNZ
+        MVI     A, 08H          ; Convert DEL to BS
+        RET
+```
+
 ## Related
 - [memory-map.md](memory-map.md) - System memory layout
 - [filesystem.md](filesystem.md) - Directory and file structures

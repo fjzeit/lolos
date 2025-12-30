@@ -160,6 +160,9 @@ CONIN:
         JZ      CONIN           ; Loop until ready
         IN      CONDAT          ; Read character
         ANI     7FH             ; Strip parity/high bit
+        CPI     7FH             ; DEL?
+        RNZ                     ; No, return as-is
+        MVI     A, 08H          ; Convert DEL to BS
         RET
 
 ; CONOUT - Write character to console

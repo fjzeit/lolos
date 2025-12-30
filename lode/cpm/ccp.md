@@ -85,8 +85,19 @@ Where A is current drive letter (A-P) and > is the prompt character.
 2. Call BDOS Open (FUNC15) to find file
 3. Load file at 0100h in 128-byte records (FUNC20)
 4. Check for overflow into CCP address space
-5. Initialize: DMA=0080h, FCBs parsed, tail at 0080h
+5. Set up program environment:
+   - Copy command tail (arguments only) to 0080h with length byte
+   - Clear and re-parse FCBs from command tail
+   - Set DMA to 0080h
 6. `CALL 0100h`
+
+**Critical:** Before running a transient program, the CCP must:
+- Clear DFCB (005Ch) completely - not just extent/CR fields
+- Set DBUFF (0080h) to contain only the arguments, not the command name
+- DBUFF+0 = length of arguments
+- DBUFF+1+ = argument string (spaces and all)
+
+If DBUFF still contains "MBASIC" when MBASIC.COM runs, MBASIC will try to load "MBASIC.BAS" and fail with "File not found".
 
 ## Internal Helper Functions
 

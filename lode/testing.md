@@ -123,3 +123,14 @@ all_tests = [
 - Python 3.8+
 - cpmtools (`cpmcp`, `cpmls`) for disk manipulation
 - z80pack cpmsim emulator
+
+## Compatibility Testing
+
+Third-party CP/M software tested on Lolos:
+
+| Software | Version | Status | Notes |
+|----------|---------|--------|-------|
+| BBC BASIC | 5.x | ✅ Works | FOR/NEXT, PRINT, program entry, file I/O |
+| MBASIC | 5.29 | ✅ Works | Loads and runs, interactive mode works |
+
+Note: CP/M software typically requires UPPERCASE input.
