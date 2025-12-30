@@ -2,7 +2,7 @@
 
 A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) written in pure Intel 8080 assembly language. Fully bootable operating system targeting z80pack emulator.
 
-**Status**: Fully operational - boots, runs commands, executes .COM files, DIR works
+**Status**: Fully operational - boots, runs commands, executes .COM files, file I/O including multi-extent files (>16K)
 
 ## Design Decisions
 - **CPU**: Intel 8080 (no Z80 extensions, maximum compatibility)
@@ -15,7 +15,7 @@ A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) writt
 |-----------|---------|------|
 | TPA | 0100h-E3FFh | ~57K |
 | CCP | E400h | ~1.4K |
-| BDOS | EC00h | ~2.4K |
+| BDOS | EC00h | ~3K |
 | BIOS | FA00h | ~428 bytes |
 | Boot | Track 0, Sector 1 | 66 bytes |
 
@@ -31,7 +31,7 @@ python3 tools/mkdisk.py
 ```
 
 ## Testing
-**Automated**: `python3 tests/run_tests.py` - runs 8 tests covering boot, commands, and file I/O
+**Automated**: `python3 tests/run_tests.py` - runs 9 tests covering boot, commands, file I/O, and multi-extent files
 
 **Manual**: Copy `drivea.dsk` to z80pack's `cpmsim/disks/` directory and run `./cpmsim`.
 

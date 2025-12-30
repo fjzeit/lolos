@@ -61,15 +61,25 @@ flowchart TD
 | hello | Program execution | hello.com runs correctly |
 | save | SAVE command | Save memory to file, verify it runs |
 | fileio | File I/O operations | Create, write, close, open, read, verify data |
+| bigfile | Multi-extent file | Write 200 records (25K spanning 2 extents), read back, verify |
 
 ### Test Programs
 
-`tests/programs/fileio.asm` - Comprehensive file I/O test that:
+`tests/programs/fileio.asm` - Single-extent file I/O test:
 1. Creates a file using MAKE
 2. Writes a 128-byte pattern using WRITE
 3. Closes and reopens the file
 4. Reads the data back
 5. Verifies the data matches
+
+`tests/programs/bigfile.asm` - Multi-extent file test:
+1. Creates BIGTEST.TMP
+2. Writes 200 records (25K, spans 2 extents at 128 records each)
+3. Each record filled with its record number (0-199)
+4. Closes and reopens file
+5. Reads all 200 records sequentially
+6. Verifies each record's data matches expected pattern
+7. Tests extent transition at record 128 (crossing from extent 0 to extent 1)
 
 ### Cross-Platform Support
 

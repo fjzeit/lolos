@@ -560,14 +560,33 @@ SELD3:
         RET
 
 ; Function 15: Open file
+; Must find directory entry matching filename AND extent
 FUNC15:
         CALL    SETFCB
+        ; Get extent from user's FCB
+        LHLD    CURFCB
+        LXI     D, 12
+        DAD     D
+        MOV     A, M            ; A = requested extent
+        STA     OPENEXT         ; Save for comparison
         XRA     A
         STA     SEARCHI         ; Start from entry 0
+F15LP:
         CALL    SEARCH          ; Find directory entry
         CPI     0FFH
         JZ      F15NF           ; Not found
-        ; Found - copy directory data to FCB
+        ; Check if extent matches
+        LHLD    DIRPTR
+        LXI     D, 12
+        DAD     D               ; HL = dir entry + 12 (extent)
+        MOV     A, M            ; A = directory extent
+        ANI     1FH             ; Mask to extent bits (0-31)
+        MOV     B, A
+        LDA     OPENEXT
+        ANI     1FH
+        CMP     B               ; Compare extents
+        JNZ     F15LP           ; Not matching extent, try next
+        ; Found matching extent - copy directory data to FCB
         LHLD    CURFCB
         LXI     D, 12           ; Skip to extent field
         DAD     D
@@ -589,15 +608,36 @@ F15NF:
         MVI     H, 0
         JMP     SETRET
 
+OPENEXT: DS     1               ; Requested extent for OPEN
+CLOSEXT: DS     1               ; Extent for CLOSE
+
 ; Function 16: Close file
+; Must find directory entry matching filename AND extent
 FUNC16:
         CALL    SETFCB
-        ; Find matching directory entry and update it
+        ; Get extent from user's FCB
+        LHLD    CURFCB
+        LXI     D, 12
+        DAD     D
+        MOV     A, M            ; A = FCB's extent
+        STA     CLOSEXT         ; Save for comparison
         XRA     A
         STA     SEARCHI         ; Start from entry 0
+F16LP:
         CALL    SEARCH
         CPI     0FFH
         JZ      F16NF
+        ; Check if extent matches
+        LHLD    DIRPTR
+        LXI     D, 12
+        DAD     D
+        MOV     A, M
+        ANI     1FH
+        MOV     B, A
+        LDA     CLOSEXT
+        ANI     1FH
+        CMP     B
+        JNZ     F16LP           ; Not matching extent, try next
         ; Update directory entry from FCB
         LHLD    CURFCB
         LXI     D, 12
@@ -685,7 +725,10 @@ FUNC20:
         LXI     D, 12
         DAD     D               ; HL = extent byte
         INR     M               ; Increment extent
-        ; Should re-open file for new extent... simplified for now
+        ; Re-open file to load next extent's data
+        CALL    F20OPN          ; Open next extent
+        ORA     A
+        JNZ     F20EOF          ; No more extents = EOF
 F20OK:
         MVI     L, 0
         JMP     SETRET
@@ -693,6 +736,77 @@ F20ERR:
         MVI     L, 1
         MVI     H, 0
         JMP     SETRET
+F20EOF:
+        MVI     L, 1            ; Return 1 = EOF
+        MVI     H, 0
+        JMP     SETRET
+
+; F20OPN - Open next extent for reading
+; Searches directory for matching filename and extent, loads allocation map
+; Returns: A=0 if found, A=FFH if not found
+F20OPN:
+        ; Get extent from FCB
+        LHLD    CURFCB
+        LXI     D, 12
+        DAD     D
+        MOV     A, M            ; A = extent to find
+        STA     OPENEXT         ; Save for comparison
+        XRA     A
+        STA     SEARCHI         ; Start search from beginning
+F20OLP:
+        CALL    SEARCH          ; Search for filename match
+        CPI     0FFH
+        RZ                      ; Not found - return FFH
+        ; Check if extent matches
+        LHLD    DIRPTR
+        LXI     D, 12
+        DAD     D
+        MOV     A, M            ; A = directory extent
+        ANI     1FH             ; Mask extent bits
+        MOV     B, A
+        LDA     OPENEXT
+        ANI     1FH
+        CMP     B
+        JNZ     F20OLP          ; Wrong extent, keep searching
+        ; Found matching extent - copy data to FCB
+        ; Copy extent byte, S1, S2, RC
+        LHLD    DIRPTR
+        LXI     D, 12
+        DAD     D               ; HL = dir entry extent
+        XCHG                    ; DE = dir entry extent
+        LHLD    CURFCB
+        PUSH    H               ; Save FCB base
+        LXI     B, 12
+        DAD     B               ; HL = FCB extent
+        XCHG                    ; DE = FCB extent, HL = dir extent
+        MVI     B, 4            ; Copy 4 bytes (EX, S1, S2, RC)
+F20OC1:
+        MOV     A, M
+        STAX    D
+        INX     H
+        INX     D
+        DCR     B
+        JNZ     F20OC1
+        ; Copy allocation map (16 bytes)
+        POP     H               ; HL = FCB base
+        PUSH    H
+        LXI     D, 16
+        DAD     D               ; HL = FCB allocation map
+        XCHG                    ; DE = FCB alloc map
+        LHLD    DIRPTR
+        LXI     B, 16
+        DAD     B               ; HL = dir alloc map
+        MVI     B, 16
+F20OC2:
+        MOV     A, M
+        STAX    D
+        INX     H
+        INX     D
+        DCR     B
+        JNZ     F20OC2
+        POP     H               ; Clean up stack
+        XRA     A               ; Return 0 = success
+        RET
 
 ; Function 21: Write sequential
 FUNC21:
@@ -710,15 +824,39 @@ FUNC21:
         MOV     A, M
         CPI     128             ; End of extent?
         JC      F21OK
-        MVI     M, 0            ; Reset CR
+        ; Extent overflow - need new extent
+        ; First, close current extent
+        CALL    F21CLS
+        ORA     A
+        JNZ     F21ERR
+        ; Increment extent number in FCB
         LHLD    CURFCB
         LXI     D, 12
         DAD     D
         INR     M               ; Increment extent
+        ; Reset CR and RC
+        LHLD    CURFCB
+        LXI     D, 32
+        DAD     D
+        MVI     M, 0            ; Reset CR
         LHLD    CURFCB
         LXI     D, 15
-        DAD     D               ; HL = record count
+        DAD     D
         MVI     M, 0            ; Reset RC
+        ; Clear allocation map for new extent
+        LHLD    CURFCB
+        LXI     D, 16
+        DAD     D
+        MVI     B, 16
+F21CAL:
+        MVI     M, 0
+        INX     H
+        DCR     B
+        JNZ     F21CAL
+        ; Create new directory entry for this extent
+        CALL    F21MKE
+        ORA     A
+        JNZ     F21ERR
 F21OK:
         MVI     L, 0
         JMP     SETRET
@@ -726,6 +864,98 @@ F21ERR:
         MVI     L, 1
         MVI     H, 0
         JMP     SETRET
+
+; Close current extent (internal helper for extent overflow)
+F21CLS:
+        ; Get extent from FCB
+        LHLD    CURFCB
+        LXI     D, 12
+        DAD     D
+        MOV     A, M
+        STA     CLOSEXT
+        XRA     A
+        STA     SEARCHI
+F21CLP:
+        CALL    SEARCH
+        CPI     0FFH
+        JZ      F21CNF          ; Not found - OK for new extent
+        ; Check extent match
+        LHLD    DIRPTR
+        LXI     D, 12
+        DAD     D
+        MOV     A, M
+        ANI     1FH
+        MOV     B, A
+        LDA     CLOSEXT
+        ANI     1FH
+        CMP     B
+        JNZ     F21CLP
+        ; Update directory entry
+        LHLD    CURFCB
+        LXI     D, 12
+        DAD     D
+        XCHG
+        LHLD    DIRPTR
+        LXI     B, 12
+        DAD     B
+        XCHG
+        MVI     B, 20
+        CALL    COPYB
+        CALL    WRITEDIR
+F21CNF:
+        XRA     A               ; Return success
+        RET
+
+; Create new directory entry for current extent
+F21MKE:
+        CALL    FINDFREE
+        CPI     0FFH
+        JZ      F21MER          ; Directory full
+        ; Clear the directory entry (32 bytes)
+        CALL    GETDIRENT
+        MVI     B, 32
+        XRA     A
+F21MCL:
+        MOV     M, A
+        INX     H
+        DCR     B
+        JNZ     F21MCL
+        ; Set user number
+        CALL    GETDIRENT
+        LDA     USERNO
+        MOV     M, A
+        ; Copy filename from FCB (11 bytes at FCB+1)
+        INX     H               ; dir+1 = filename start
+        PUSH    H               ; Save destination
+        LHLD    CURFCB
+        INX     H               ; FCB+1 = filename start
+        POP     D               ; DE = dir+1
+        XCHG                    ; HL = dir+1, DE = FCB+1
+        MVI     B, 11
+F21MCN:
+        LDAX    D               ; Get from FCB
+        MOV     M, A            ; Store to dir
+        INX     H
+        INX     D
+        DCR     B
+        JNZ     F21MCN
+        ; Set extent number from FCB
+        CALL    GETDIRENT
+        LXI     D, 12
+        DAD     D               ; HL = dir+12 (extent field)
+        PUSH    H
+        LHLD    CURFCB
+        LXI     D, 12
+        DAD     D
+        MOV     A, M            ; Get extent from FCB
+        POP     H
+        MOV     M, A            ; Store in directory entry
+        CALL    WRITEDIR
+        XRA     A
+        RET
+F21MER:
+        MVI     A, 1
+        RET
 
 ; Function 22: Make file
 FUNC22:

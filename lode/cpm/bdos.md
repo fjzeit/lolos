@@ -96,6 +96,48 @@ The Allocation Vector (ALV) must be initialized on first drive login:
 - If not, calls INITALV before setting login bit
 - INITALV clears ALV, sets AL0/AL1 bits, then scans directory to mark used blocks
 
+### Multi-Extent File Handling
+
+Files larger than 16K (128 records) span multiple **extents**. Each extent is a separate directory entry with:
+- Same filename (bytes 1-11)
+- Different extent number (byte 12, masked to 5 bits for 0-31)
+- Own allocation map (bytes 16-31)
+- Own record count RC (byte 15)
+
+**FUNC15 (Open)**: Must search for entry matching both filename AND extent number:
+```
+F15LP:  CALL    SEARCH          ; Find filename match
+        CPI     0FFH
+        JZ      F15NF           ; Not found
+        ; Check if extent matches
+        LHLD    DIRPTR
+        LXI     D, 12
+        DAD     D
+        MOV     A, M            ; Directory extent
+        ANI     1FH             ; Mask extent bits
+        MOV     B, A
+        LDA     OPENEXT         ; Requested extent
+        ANI     1FH
+        CMP     B
+        JNZ     F15LP           ; Wrong extent, keep searching
+```
+
+**FUNC16 (Close)**: Same pattern - must find matching extent to update RC and allocation map.
+
+**FUNC20 (Read Sequential)**: When CR reaches 128 after a read:
+1. Reset CR to 0
+2. Increment extent number in FCB
+3. Call F20OPN to search directory for next extent
+4. Copy allocation map from directory to FCB
+5. If extent not found, return EOF (A=1)
+
+**FUNC21 (Write Sequential)**: When CR reaches 128 after a write:
+1. Close current extent (F21CLS) - updates RC, writes directory
+2. Increment extent number in FCB
+3. Reset CR, RC to 0
+4. Clear allocation map (16 bytes)
+5. Create new directory entry (F21MKE) for the new extent
+
 ## Related
 - [filesystem.md](filesystem.md) - FCB structure and directory format
 - [bios.md](bios.md) - Low-level I/O calls

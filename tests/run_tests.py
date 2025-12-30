@@ -152,6 +152,11 @@ class CpmTester:
         if fileio_com.exists():
             self.add_file_to_disk(fileio_com, "FILEIO.COM")
 
+        # Add multi-extent test program if it exists
+        bigfile_com = PROJECT_ROOT / "tests" / "programs" / "bigfile.com"
+        if bigfile_com.exists():
+            self.add_file_to_disk(bigfile_com, "BIGFILE.COM")
+
         return True
 
     def add_file_to_disk(self, local_path: Path, cpm_name: str) -> bool:
@@ -451,6 +456,24 @@ def test_fileio(tester: CpmTester):
     return False, "Unexpected output from FILEIO", output
 
 
+def test_bigfile(tester: CpmTester):
+    """Test multi-extent file operations (>16K file spanning 2 extents)"""
+    # This test writes 200 records (25K) which spans 2 extents
+    # Give it more time since it writes a lot of data
+    success, output = tester.run_cpmsim(["BIGFILE"], timeout=60)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Multi-extent file test passed", output
+
+    if "FAIL" in output or "error" in output.lower():
+        return False, "Multi-extent file test failed", output
+
+    return False, "Unexpected output from BIGFILE", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -491,6 +514,7 @@ def main():
         ("hello", lambda: test_hello_program(tester)),
         ("save", lambda: test_save_command(tester)),
         ("fileio", lambda: test_fileio(tester)),
+        ("bigfile", lambda: test_bigfile(tester)),
     ]
 
     # Filter tests if specific test requested
