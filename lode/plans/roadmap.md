@@ -51,12 +51,17 @@
 - [x] Copy to disk with cpmtools
 - [x] Verify transient program loading and execution
 
-## Next Steps
-
-### Phase 10: Extended Testing
-- [ ] Test TYPE, ERA, REN, SAVE commands with real files
+### Phase 10: Extended Testing (In Progress)
+- [x] Create automated test harness (`tests/run_tests.py`)
+- [x] Test TYPE, ERA, REN commands with real files
+- [x] Fix TYPE command argument parsing (was using command name, not filename)
+- [x] Fix ERA command argument parsing (same issue)
+- [x] Fix HASWILD function (inverted logic)
+- [ ] Test SAVE command
 - [ ] Test file I/O with a program that reads/writes files
 - [ ] Test multi-extent files (files > 16K)
+
+## Next Steps
 
 ### Phase 11: Compatibility Testing
 - [ ] Test MBASIC

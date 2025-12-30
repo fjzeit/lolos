@@ -1,0 +1,104 @@
+# Testing Infrastructure
+
+Automated test harness for verifying CP/M functionality.
+
+## Test Harness
+
+`tests/run_tests.py` - Cross-platform Python test runner
+
+### Usage
+
+```bash
+# Run all tests (builds first)
+python3 tests/run_tests.py
+
+# Run with verbose output
+python3 tests/run_tests.py -v
+
+# Skip build step
+python3 tests/run_tests.py --no-build
+
+# Run specific test
+python3 tests/run_tests.py --test type
+```
+
+### Architecture
+
+```mermaid
+flowchart TD
+    A[run_tests.py] --> B[Build System]
+    B --> C[Deploy Disk]
+    C --> D[Run Tests]
+
+    B --> B1[zmac assembler]
+    B --> B2[mkdisk.py]
+
+    C --> C1[Copy drivea.dsk to cpmsim/disks]
+    C --> C2[Add test programs via cpmcp]
+
+    D --> D1[Pipe commands to cpmsim]
+    D --> D2[Capture output]
+    D --> D3[Verify results]
+```
+
+### Test Flow
+
+1. **Build**: Assembles all components and creates disk image
+2. **Deploy**: Copies disk to cpmsim's disks directory
+3. **Add test files**: Uses cpmcp to add test data files
+4. **Execute**: Pipes commands to cpmsim via stdin
+5. **Verify**: Checks output for expected patterns
+
+### Current Tests
+
+| Test | Description | What it verifies |
+|------|-------------|------------------|
+| boot | System boots | Boot message, prompt appears |
+| dir | DIR command | File listing works |
+| type | TYPE command | File contents displayed |
+| era | ERA command | File deletion works |
+| ren | REN command | File renaming works |
+| hello | Program execution | hello.com runs correctly |
+
+### Cross-Platform Support
+
+The harness works on Linux and Windows:
+
+- **Linux/Mac**: Uses `printf | timeout cpmsim` for command input
+- **Windows**: Uses `subprocess.Popen` with stdin pipe
+
+cpmsim locations searched:
+- Linux: `~/workspace/z80pack/cpmsim`, `~/z80pack/cpmsim`, `~/.z80pack/cpmsim`
+- Windows: `~/z80pack/cpmsim`, `C:/z80pack/cpmsim`
+
+### Adding New Tests
+
+```python
+def test_example(tester: CpmTester):
+    """Test description"""
+    # Optional: add files to disk
+    tester.create_text_file("TEST.TXT", "content")
+
+    # Run commands
+    success, output = tester.run_cpmsim(["COMMAND ARG"], timeout=5)
+    if not success:
+        return False, output, output
+
+    # Verify output
+    if "expected text" in output:
+        return True, "Test passed", output
+
+    return False, "Expected text not found", output
+
+# Add to all_tests list in main()
+all_tests = [
+    # ... existing tests ...
+    ("example", lambda: test_example(tester)),
+]
+```
+
+### Dependencies
+
+- Python 3.8+
+- cpmtools (`cpmcp`, `cpmls`) for disk manipulation
+- z80pack cpmsim emulator

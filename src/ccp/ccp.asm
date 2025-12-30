@@ -701,10 +701,31 @@ PRNAME:
 ;-------------------------------------------------------------------------------
 
 CMDERA:
-        ; Check for filename
-        LDA     DFCB+1
+        ; Parse argument from command line into DFCB
+        LXI     H, DBUFF+1
+        ; Skip past the command name (non-space chars)
+ERASK1:
+        MOV     A, M
+        ORA     A
+        JZ      ERAERR          ; End of line, no arg
         CPI     ' '
-        JZ      ERAERR
+        JZ      ERASK2          ; Found space, look for arg
+        INX     H
+        JMP     ERASK1
+ERASK2:
+        ; Skip spaces
+        MOV     A, M
+        CPI     ' '
+        JNZ     ERACHK          ; Non-space found
+        INX     H
+        JMP     ERASK2
+ERACHK:
+        ; Check if there's an argument
+        ORA     A               ; Null = end
+        JZ      ERAERR          ; No argument
+        ; Parse filename into DFCB
+        LXI     D, DFCB
+        CALL    PARFCB
 
         ; Confirm if using wildcards
         CALL    HASWILD
@@ -735,18 +756,22 @@ ERAERR:
         JMP     PRTSTR
 
 ; Check if FCB has wildcards
-; Returns NZ if wildcards present
+; Returns NZ if wildcards present, Z if no wildcards
 HASWILD:
         LXI     H, DFCB+1
         MVI     B, 11
 HWLOOP:
         MOV     A, M
         CPI     '?'
-        RNZ
+        JZ      HWFND           ; Found wildcard
         INX     H
         DCR     B
         JNZ     HWLOOP
-        XRA     A               ; Return Z (no wildcards - wait, this is wrong)
+        XRA     A               ; Return Z (no wildcards)
+        RET
+HWFND:
+        MVI     A, 1            ; Return NZ (wildcards present)
+        ORA     A
         RET
 
 ;-------------------------------------------------------------------------------
@@ -809,9 +834,32 @@ RENNF:
 ;-------------------------------------------------------------------------------
 
 CMDTYP:
-        LDA     DFCB+1
+        ; Parse argument from command line into DFCB
+        ; (DFCB currently contains "TYPE", we need the filename)
+        LXI     H, DBUFF+1
+        ; Skip past the command name (non-space chars)
+TYPSK1:
+        MOV     A, M
+        ORA     A
+        JZ      TYPERR          ; End of line, no arg
         CPI     ' '
-        JZ      TYPERR
+        JZ      TYPSK2          ; Found space, look for arg
+        INX     H
+        JMP     TYPSK1
+TYPSK2:
+        ; Skip spaces
+        MOV     A, M
+        CPI     ' '
+        JNZ     TYPCHK          ; Non-space found
+        INX     H
+        JMP     TYPSK2
+TYPCHK:
+        ; Check if there's an argument
+        ORA     A               ; Null = end
+        JZ      TYPERR          ; No argument
+        ; Parse filename into DFCB
+        LXI     D, DFCB
+        CALL    PARFCB
 
         ; Open file
         LXI     D, DFCB

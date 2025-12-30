@@ -42,11 +42,34 @@ flowchart TD
 
 ## Command Line Parsing
 
+Initial parsing (in `PARSE`):
 1. Convert to uppercase
-2. Extract drive prefix if present (e.g., `B:`)
-3. Parse first filename into FCB at 005Ch
-4. Parse second filename into FCB at 006Ch
-5. Store remainder (command tail) at 0080h with length byte
+2. Parse first word (command) into DFCB (005Ch)
+3. Parse second word (argument) into DFCB2 (006Ch)
+
+**Important:** For built-in commands, DFCB contains the command name (e.g., "TYPE"), not the filename. Built-in commands must re-parse the command line from DBUFF to get their argument.
+
+DIR, TYPE, ERA all use this pattern:
+```asm
+        LXI     H, DBUFF+1      ; Start of command line
+        ; Skip command name
+SKIP1:  MOV     A, M
+        CPI     ' '
+        JZ      SKIP2
+        INX     H
+        JMP     SKIP1
+        ; Skip spaces
+SKIP2:  MOV     A, M
+        CPI     ' '
+        JNZ     PARSE
+        INX     H
+        JMP     SKIP2
+        ; Parse argument into DFCB
+PARSE:  LXI     D, DFCB
+        CALL    PARFCB
+```
+
+For transient commands (.COM files), DFCB correctly contains the program name.
 
 ## Prompt Format
 

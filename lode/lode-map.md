@@ -4,6 +4,7 @@
 - [summary.md](summary.md) - Project overview
 - [terminology.md](terminology.md) - Domain vocabulary
 - [practices.md](practices.md) - Development patterns
+- [testing.md](testing.md) - Test harness and automation
 
 ## CP/M Architecture
 - [cpm/memory-map.md](cpm/memory-map.md) - Memory layout and vectors
