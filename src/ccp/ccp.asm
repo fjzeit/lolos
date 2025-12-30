@@ -74,6 +74,10 @@ CCPENT:
 ; Re-entry point after transient command
 CCPRET:
         LXI     SP, CCPSTK      ; Set up local stack
+        ; Sync with system drive (programs may have changed it via BDOS)
+        LDA     CDISK
+        ANI     0FH
+        STA     CURDSK
 
 ; Main command loop
 CCPLP:

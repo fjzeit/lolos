@@ -131,6 +131,7 @@ Third-party CP/M software tested on Lolos:
 | Software | Version | Status | Notes |
 |----------|---------|--------|-------|
 | BBC BASIC | 5.x | ✅ Works | FOR/NEXT, PRINT, program entry, file I/O |
-| MBASIC | 5.29 | ✅ Works | Loads and runs, interactive mode works |
+| MBASIC | 5.29 | ✅ Works | Interactive mode, backspace works |
+| Adventure | - | ✅ Works | Colossal Cave, reads data file |
 
 Note: CP/M software typically requires UPPERCASE input.
