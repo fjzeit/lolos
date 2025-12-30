@@ -61,7 +61,10 @@
 - [x] Test file I/O with fileio.com test program
 - [x] Fix BDOS WRITEREC - PUTBLOCK was corrupting HL (block number) before BLKTOSEC
 - [x] Fix BDOS SELDRIVE - ALV not initialized on first drive login
-- [ ] Test multi-extent files (files > 16K)
+- [x] Test multi-extent files (files > 16K)
+- [x] Fix BDOS FUNC15/16 extent matching (was only matching filename, not extent)
+- [x] Fix BDOS FUNC20 extent transition (load next extent's allocation map on read)
+- [x] Fix BDOS FUNC21 extent overflow (close current, create new directory entry)
 
 ## Next Steps
 
@@ -73,7 +76,6 @@
 
 ### Known Issues to Address
 - Warm boot doesn't reload CCP/BDOS from disk (uses memory copy)
-- Multi-extent files not tested
 
 ## Toolchain
 - **Assembler**: zmac with `-8` flag for 8080 mode
