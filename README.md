@@ -2,6 +2,8 @@
 
 A from-scratch implementation of CP/M 2.2 (Control Program for Microcomputers) written in pure Intel 8080 assembly language. Lolos is a fully bootable operating system that runs on the z80pack emulator.
 
+> **Note**: This project is still under active development and testing. While core functionality works and passes automated tests, some edge cases may not yet be fully handled.
+
 ## Features
 
 - **Complete CP/M 2.2 implementation** - All standard BDOS functions (0-37, 40)
@@ -15,9 +17,15 @@ A from-scratch implementation of CP/M 2.2 (Control Program for Microcomputers) w
 
 ### Prerequisites
 
-- Python 3.8+
+**Build Requirements:**
+- [zmac](http://48k.ca/zmac.html) assembler (included in `tools/` for Linux and Windows)
+
+**Runtime Requirements:**
 - [z80pack](https://github.com/udo-munk/z80pack) emulator (cpmsim)
-- [cpmtools](https://github.com/lipro-cpm4l/cpmtools) (cpmcp, cpmls)
+
+**Test Suite Requirements:**
+- Python 3.8+
+- [cpmtools](https://github.com/lipro-cpm4l/cpmtools) (cpmcp, cpmls) - for disk image manipulation
 
 ### Build and Run
 
@@ -119,6 +127,8 @@ E400h ├───────────────────────�
 
 ## Testing
 
+The test suite requires Python 3.8+ and cpmtools.
+
 ### Automated Tests
 
 ```bash
@@ -151,11 +161,15 @@ python3 tests/run_tests.py --test fileio
 
 ### Compatibility Tested
 
+Initial compatibility testing with third-party CP/M software:
+
 | Software | Status | Notes |
 |----------|--------|-------|
 | MBASIC 5.29 | ✅ Works | Interactive mode, file I/O |
 | BBC BASIC 5.x | ✅ Works | FOR/NEXT, PRINT, file I/O |
 | Colossal Cave Adventure | ✅ Works | Full game, reads data file |
+
+Additional software compatibility testing is ongoing.
 
 ## Project Structure
 
