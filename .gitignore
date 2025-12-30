@@ -1,0 +1,31 @@
+# Assembled binaries
+*.cim
+*.lst
+*.hex
+*.bin
+*.com
+
+# Disk images
+*.dsk
+
+# Third party tools
+tools/*.exe
+tools/zmac
+
+# Lode temporary files
+lode/tmp/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
