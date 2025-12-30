@@ -37,26 +37,35 @@
 - [x] Fix BDOS console buffer input
 - [x] Fix CCP character output and prompt
 - [x] Test basic commands (DIR works, shows "No File" on empty disk)
-- [ ] Test with simple .COM programs
-- [ ] Test TYPE, ERA, REN, SAVE commands with real files
+- [x] Fix CCP RDCMD null termination
+- [x] Fix CMDDIR wildcard handling
+- [x] Fix BDOS USERNO initialization (via B_RESET at CCP startup)
+- [x] Fix CCP register preservation (OUTCHR/BDOSCL preserve HL/BC)
+- [x] Fix BDOS READREC EOF detection (check RC field)
+- [x] Fix BDOS SEARCH DIRPTR setting
+- [x] Fix BDOS SEARCHI reset before independent searches
+- [x] Test hello.com - loads and executes correctly
+
+### Phase 9: Program Testing (Completed)
+- [x] Write and assemble hello.com test program
+- [x] Copy to disk with cpmtools
+- [x] Verify transient program loading and execution
 
 ## Next Steps
 
-### Phase 9: Program Testing
-- [ ] Write and assemble hello.com test program
-- [ ] Copy to disk with cpmtools
-- [ ] Verify transient program loading and execution
+### Phase 10: Extended Testing
+- [ ] Test TYPE, ERA, REN, SAVE commands with real files
 - [ ] Test file I/O with a program that reads/writes files
+- [ ] Test multi-extent files (files > 16K)
 
-### Phase 10: Compatibility Testing
+### Phase 11: Compatibility Testing
 - [ ] Test MBASIC
 - [ ] Test WordStar or similar
 - [ ] Test Turbo Pascal or other compilers
 - [ ] Fix compatibility issues
 
 ### Known Issues to Address
-- Warm boot doesn't reload CCP/BDOS from disk
-- DIR command doesn't handle "DIR" vs "DIR *.COM" correctly (minor)
+- Warm boot doesn't reload CCP/BDOS from disk (uses memory copy)
 - Multi-extent files not tested
 
 ## Toolchain

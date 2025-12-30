@@ -42,6 +42,42 @@ OUTCHR: MOV     E, C            ; Save char first
         CALL    ENTRY
 ```
 
+### CCP Command Buffer Must Be Null-Terminated
+RDCMD reads characters into DBUFF but must add a null terminator after the copy loop. Without this, PARSE sees garbage after the command name:
+```asm
+        ; After copy loop
+        XRA     A
+        STAX    D               ; Null terminate
+```
+
+### CCP DIR Command Wildcard Handling
+CMDDIR must scan DBUFF for arguments after the command name, not check DFCB. PARSE puts the command name ("DIR") in DFCB, so checking `DFCB+1 == ' '` fails.
+
+### BDOS SEARCH State (SEARCHI) Must Be Reset
+SEARCH maintains `SEARCHI` to support FUNC17+FUNC18 multi-call searches. Any function that starts a new independent search MUST reset SEARCHI to 0:
+```asm
+        XRA     A
+        STA     SEARCHI         ; Start from entry 0
+        CALL    SEARCH
+```
+Functions that need this: FUNC15 (Open), FUNC16 (Close), FUNC19 (Delete), FUNC23 (Rename), FUNC30 (Set Attributes), RNDREC (random access).
+
+### BDOS SEARCH Must Set DIRPTR
+When SEARCH finds a match, it must save the directory entry pointer for later use by FUNC15/FUNC16:
+```asm
+        ; Match found
+        CALL    GETDIRENT       ; Get entry pointer
+        SHLD    DIRPTR          ; Save for OPEN/CLOSE
+```
+
+### Register Preservation Contracts
+- BDOS entry does XCHG which corrupts caller's HL
+- CCP utilities (OUTCHR, BDOSCL) should preserve HL/BC internally
+- BDOS functions may corrupt any register except those documented as preserved
+
+### BDOS Variables (DS) Are Not Initialized
+`DS` reserves space but doesn't initialize memory. Variables like USERNO must be explicitly initialized (CCP calls B_RESET at startup to initialize BDOS state).
+
 ## Testing
 - Use `strace -e trace=read ./cpmsim` to verify disk reads
 - Check t-state count in cpmsim output - low count means early crash

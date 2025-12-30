@@ -61,6 +61,27 @@ The BDOS provides system calls accessed via `CALL 0005h` with:
 - 00h-03h: Success (index into directory buffer)
 - FFh (255): Error / not found
 
+## Implementation Notes
+
+### SEARCH Function
+The SEARCH function maintains state in `SEARCHI` (next entry to search from) to support multi-call operations like FUNC17+FUNC18.
+
+**Critical invariant**: Any function that starts a new search must reset `SEARCHI` to 0:
+- FUNC15 (Open) - must reset SEARCHI
+- FUNC16 (Close) - must reset SEARCHI
+- FUNC17 (Search First) - resets SEARCHI, then falls through to FUNC18
+- FUNC18 (Search Next) - continues from SEARCHI (no reset)
+- FUNC19 (Delete) - resets SEARCHI for loop
+- FUNC23 (Rename) - resets SEARCHI for loop
+- FUNC30 (Set Attributes) - must reset SEARCHI
+- RNDREC (Random access) - must reset SEARCHI before extent search
+
+### DIRPTR Variable
+When SEARCH finds a match, it must save the directory entry pointer to `DIRPTR` using `SHLD DIRPTR`. FUNC15 (Open) and FUNC16 (Close) use DIRPTR to copy data between the FCB and directory entry.
+
+### Register Preservation Contract
+BDOS may corrupt HL (used for return values) but callers expect BC/DE to be preserved. Internal utilities like OUTCHR and BDOSCL should preserve HL/BC for caller convenience.
+
 ## Related
 - [filesystem.md](filesystem.md) - FCB structure and directory format
 - [bios.md](bios.md) - Low-level I/O calls

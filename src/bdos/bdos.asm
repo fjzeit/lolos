@@ -553,11 +553,12 @@ SELD2:
 ; Function 15: Open file
 FUNC15:
         CALL    SETFCB
+        XRA     A
+        STA     SEARCHI         ; Start from entry 0
         CALL    SEARCH          ; Find directory entry
         CPI     0FFH
         JZ      F15NF           ; Not found
         ; Found - copy directory data to FCB
-        CALL    GETDIRENT       ; HL = directory entry
         LHLD    CURFCB
         LXI     D, 12           ; Skip to extent field
         DAD     D
@@ -583,11 +584,12 @@ F15NF:
 FUNC16:
         CALL    SETFCB
         ; Find matching directory entry and update it
+        XRA     A
+        STA     SEARCHI         ; Start from entry 0
         CALL    SEARCH
         CPI     0FFH
         JZ      F16NF
         ; Update directory entry from FCB
-        CALL    GETDIRENT
         LHLD    CURFCB
         LXI     D, 12
         DAD     D               ; HL = FCB+12
@@ -616,7 +618,21 @@ FUNC17:
 ; Function 18: Search for next
 FUNC18:
         CALL    SEARCH
-        MOV     L, A            ; Return directory code (0-3 or FF)
+        CPI     0FFH
+        JZ      F18NF           ; Not found
+        ; Copy directory buffer to DMA address
+        PUSH    PSW
+        LHLD    DMADDR
+        XCHG                    ; DE = DMA address
+        LXI     H, DIRBUF
+        MVI     B, 128
+        CALL    COPYB
+        POP     PSW
+        MOV     L, A            ; Return directory code (0-3)
+        MVI     H, 0
+        JMP     SETRET
+F18NF:
+        MVI     L, 0FFH
         MVI     H, 0
         JMP     SETRET
 
@@ -832,6 +848,8 @@ FUNC29:
 FUNC30:
         ; Copy attribute bits from FCB to directory
         CALL    SETFCB
+        XRA     A
+        STA     SEARCHI         ; Start from entry 0
         CALL    SEARCH
         CPI     0FFH
         JZ      F30NF
@@ -1135,6 +1153,8 @@ SRCHCN:
         JNZ     SRCHCMP
 
         ; Match found
+        CALL    GETDIRENT       ; Get entry pointer
+        SHLD    DIRPTR          ; Save for OPEN/etc
         LDA     SRCHCUR
         INR     A
         STA     SEARCHI         ; Save for search next
@@ -1355,7 +1375,17 @@ WRITEDIR:
 ; Returns A = 0 if OK, 1 if error/EOF
 READREC:
         STA     RECREQ
+        ; Check if record is beyond file size (RC)
+        LHLD    CURFCB
+        LXI     D, 15           ; Offset to RC (record count)
+        DAD     D
+        MOV     B, M            ; B = RC
+        LDA     RECREQ          ; A = requested record
+        CMP     B               ; Compare record with RC
+        JNC     RRECEOF         ; Record >= RC = EOF
+
         ; Get block number from allocation map
+        LDA     RECREQ          ; Reload record number
         CALL    GETBLOCK
         MOV     A, H
         ORA     L
@@ -1784,6 +1814,8 @@ RNDREC:
         DAD     D
         MOV     M, A
         ; Re-open file for new extent
+        XRA     A
+        STA     SEARCHI         ; Start from entry 0
         CALL    SEARCH
         RET
 

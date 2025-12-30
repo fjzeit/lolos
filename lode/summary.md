@@ -2,7 +2,7 @@
 
 A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) written in pure Intel 8080 assembly language. Fully bootable operating system targeting z80pack emulator.
 
-**Status**: Fully operational - boots, accepts commands, displays prompts correctly
+**Status**: Fully operational - boots, runs commands, executes .COM files, DIR works
 
 ## Design Decisions
 - **CPU**: Intel 8080 (no Z80 extensions, maximum compatibility)
@@ -13,11 +13,11 @@ A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) writt
 ## Memory Map (64K System)
 | Component | Address | Size |
 |-----------|---------|------|
-| TPA | 0100h-DBFFh | ~55K |
-| CCP | E400h | 1345 bytes |
-| BDOS | EC00h | 2358 bytes |
-| BIOS | FA00h | 428 bytes |
-| Boot | 0000h | 66 bytes |
+| TPA | 0100h-E3FFh | ~57K |
+| CCP | E400h | ~1.4K |
+| BDOS | EC00h | ~2.4K |
+| BIOS | FA00h | ~428 bytes |
+| Boot | Track 0, Sector 1 | 66 bytes |
 
 ## Build
 **Windows**: Run `build.bat`

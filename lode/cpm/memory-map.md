@@ -4,14 +4,16 @@
 
 ```
 FFFFh ┌─────────────────────────┐
-      │        BIOS            │  ~2.5K - Hardware abstraction
-F200h ├─────────────────────────┤
-      │        BDOS            │  ~3.5K - System calls
-E400h ├─────────────────────────┤
+      │        (unused)        │
+FBACh ├─────────────────────────┤
+      │        BIOS            │  ~428 bytes - Hardware abstraction
+FA00h ├─────────────────────────┤
+      │        BDOS            │  ~2.4K - System calls
+EC00h ├─────────────────────────┤
       │        CCP             │  ~2K   - Command processor
-DC00h ├─────────────────────────┤
+E400h ├─────────────────────────┤
       │                        │
-      │        TPA             │  ~55K  - Transient Program Area
+      │        TPA             │  ~57K  - Transient Program Area
       │   (User Programs)      │
       │                        │
 0100h ├─────────────────────────┤
@@ -41,11 +43,16 @@ DC00h ├───────────────────────�
 
 ## Address Calculation
 
-For a 64K system with BIOS at F200h:
-- BIOS = F200h (must be page-aligned for some implementations)
-- BDOS = BIOS - 0E00h = E400h
-- CCP = BDOS - 0800h = DC00h
-- Top of TPA = CCP - 1 = DBFFh
+For a 64K system (MSIZE=64):
+```
+BIAS = (MSIZE - 20) * 1024 = 44 * 1024 = B000h
+CCP  = 3400h + BIAS = E400h
+BDOS = CCP + 0800h  = EC00h
+BIOS = CCP + 1600h  = FA00h
+Top of TPA = CCP - 1 = E3FFh
+```
+
+The base addresses (3400h, 0800h offset, 1600h offset) are fixed CP/M 2.2 constants.
 
 ## Related
 - [bios.md](bios.md) - BIOS implementation

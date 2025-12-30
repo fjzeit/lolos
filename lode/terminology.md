@@ -11,3 +11,14 @@
 - **BDOS call** - System call via CALL 0005h with function number in C register
 - **Warm boot** - Reload CCP/BDOS, preserving BIOS (jump to 0000h)
 - **Cold boot** - Full system initialization
+- **DMA** - Direct Memory Access, buffer address for disk I/O (default 0080h)
+- **DIRBUF** - 128-byte buffer in BDOS for directory sector operations
+- **Directory code** - Return value 0-3 indicating which of 4 entries in a sector matched
+- **Extent** - 16K chunk of a file; large files span multiple directory entries
+- **RC** - Record Count, number of 128-byte records in an extent (FCB offset 15)
+- **CR** - Current Record, sequential I/O position within extent (FCB offset 32)
+- **SEARCHI** - BDOS variable tracking next directory entry for search operations
+- **DIRPTR** - BDOS variable pointing to matched directory entry after SEARCH
+- **E5h** - Magic byte marking deleted/free directory entries
+- **8" SSSD** - 8-inch Single-Sided Single-Density, IBM 3740 format
+- **zmac** - Z80/8080 macro assembler; use `-8` flag for 8080-only mode

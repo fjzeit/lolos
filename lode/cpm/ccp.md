@@ -58,11 +58,48 @@ Where A is current drive letter (A-P) and > is the prompt character.
 
 ## Transient Command Loading
 
-1. Search current drive for `COMMAND.COM`
-2. If not found and drive specified, search that drive
-3. Load file at 0100h
-4. Initialize: DMA=0080h, FCBs parsed, tail at 0080h
-5. `CALL 0100h`
+1. Add `.COM` extension to FCB (DFCB+9 = "COM")
+2. Call BDOS Open (FUNC15) to find file
+3. Load file at 0100h in 128-byte records (FUNC20)
+4. Check for overflow into CCP address space
+5. Initialize: DMA=0080h, FCBs parsed, tail at 0080h
+6. `CALL 0100h`
+
+## Internal Helper Functions
+
+### OUTCHR
+Outputs character in C register. Preserves HL and BC for caller convenience (BDOS corrupts HL):
+```asm
+OUTCHR: PUSH    H               ; Preserve HL
+        PUSH    B               ; Preserve BC
+        MOV     E, C            ; E = character
+        MVI     C, B_CONOUT     ; Function 2
+        CALL    ENTRY
+        POP     B
+        POP     H
+        RET
+```
+
+### BDOSCL
+Generic BDOS call wrapper. Preserves HL and BC:
+```asm
+BDOSCL: PUSH    H
+        PUSH    B
+        CALL    ENTRY
+        POP     B
+        POP     H
+        RET
+```
+
+### TOUPPER
+Converts lowercase (a-z) to uppercase (A-Z). Returns unchanged if not lowercase.
+
+## CCP Startup Sequence
+
+1. Entry from warm boot with C = current drive
+2. Save drive number to CURDSK
+3. Call BDOS Reset (FUNC13) to initialize BDOS variables
+4. Enter main command loop
 
 ## Related
 - [bdos.md](bdos.md) - System calls used by CCP

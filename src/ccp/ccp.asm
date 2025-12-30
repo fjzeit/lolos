@@ -67,6 +67,10 @@ CCPENT:
         ANI     0FH             ; Mask drive number
         STA     CURDSK
 
+        ; Reset disk system (initializes BDOS variables including user number)
+        MVI     C, B_RESET
+        CALL    ENTRY
+
 ; Re-entry point after transient command
 CCPRET:
         LXI     SP, CCPSTK      ; Set up local stack
@@ -126,6 +130,10 @@ RDCMPL:
         INR     C
         DCR     B
         JNZ     RDCMPL
+
+        ; Null terminate the string
+        XRA     A
+        STAX    D
 
         ; Store length at DBUFF
         MOV     A, C
@@ -562,12 +570,35 @@ CMDTBL:
 ;-------------------------------------------------------------------------------
 
 CMDDIR:
-        ; If no filename specified, use "*.*"
-        LDA     DFCB+1
+        ; Check if there's an argument after "DIR"
+        ; Scan DBUFF for space after command, then check for arg
+        LXI     H, DBUFF+1
+        ; Skip past the command name (non-space chars)
+DIRSK1:
+        MOV     A, M
+        ORA     A
+        JZ      DIRWLD          ; End of line, no arg
         CPI     ' '
-        JNZ     DIRSRC
+        JZ      DIRSK2          ; Found space, look for arg
+        INX     H
+        JMP     DIRSK1
+DIRSK2:
+        ; Skip spaces
+        MOV     A, M
+        CPI     ' '
+        JNZ     DIRCHK          ; Non-space found
+        INX     H
+        JMP     DIRSK2
+DIRCHK:
+        ; Check if there's an argument
+        ORA     A               ; Null = end
+        JNZ     DIRARG          ; Non-null = has arg
+        ; Fall through to wildcards
 
-        ; Fill with "????????" "???"
+DIRWLD:
+        ; No argument - clear FCB and fill with wildcards
+        XRA     A
+        STA     DFCB            ; Drive = 0 (default)
         LXI     H, DFCB+1
         MVI     B, 11
         MVI     A, '?'
@@ -576,6 +607,13 @@ DIRFIL:
         INX     H
         DCR     B
         JNZ     DIRFIL
+        JMP     DIRSRC
+
+DIRARG:
+        ; Has argument - parse it into DFCB
+        ; HL points to start of argument
+        LXI     D, DFCB
+        CALL    PARFCB
 
 DIRSRC:
         ; Search for first match
@@ -995,7 +1033,11 @@ USRERR:
 
 ; BDOS call
 BDOSCL:
+        PUSH    H               ; Preserve HL (BDOS corrupts it)
+        PUSH    B               ; Preserve BC
         CALL    ENTRY
+        POP     B
+        POP     H
         RET
 
 ; Get/select current disk
@@ -1008,9 +1050,13 @@ GETDSK:
 
 ; Output character in C
 OUTCHR:
+        PUSH    H               ; Preserve HL (BDOS corrupts it)
+        PUSH    B               ; Preserve BC
         MOV     E, C            ; E = character to output
         MVI     C, B_CONOUT     ; C = function number
         CALL    ENTRY
+        POP     B
+        POP     H
         RET
 
 ; Print string ($ terminated)

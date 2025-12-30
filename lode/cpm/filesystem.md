@@ -80,6 +80,27 @@ For DSM >= 256: Two-byte block numbers (D0-D15 = 8 blocks max)
 
 8" SSSD has DSM=242, so uses 8-bit allocation.
 
+## Directory Location on Disk
+
+For 8" SSSD with 2 reserved tracks:
+- Reserved tracks: 0-1 (contain boot loader, CCP, BDOS, BIOS)
+- Directory starts at track 2, sector 1
+- Disk offset: 2 * 26 * 128 = 6656 bytes = 0x1A00
+
+Directory sector layout:
+- Each 128-byte sector holds 4 directory entries (32 bytes each)
+- 64 entries = 16 sectors = 2048 bytes
+
+## BDOS Directory Operations
+
+### FUNC17/18 (Search First/Next)
+Returns directory code (0-3) indicating which entry within the sector matched. The BDOS copies the entire 128-byte directory sector (DIRBUF) to the user's DMA address. The caller extracts the specific entry at offset `(code * 32)`.
+
+### Directory Entry Validation
+- Byte 0 = E5h: Entry is deleted/free
+- Byte 0 = 0-15: User number for the file
+- Filename/type bytes have high bits masked for attribute flags
+
 ## Related
 - [bdos.md](bdos.md) - File operation functions
 - [bios.md](bios.md) - Disk Parameter Block
