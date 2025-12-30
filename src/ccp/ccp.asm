@@ -302,8 +302,21 @@ PFEXT:
         DCX     H               ; Oops, undo if we came from PFNMLP
         MOV     A, M
         CPI     '.'
-        JNZ     PFEX2
+        JNZ     PFXPAD
         INX     H               ; Now skip it
+
+        ; Pad remaining filename chars with spaces (B = count, DE = next pos)
+PFXPAD:
+        MOV     A, B
+        ORA     A
+        JZ      PFEX2           ; No padding needed
+        MVI     A, ' '
+PFXPDL:
+        STAX    D
+        INX     D
+        DCR     B
+        JNZ     PFXPDL
+
 PFEX2:
         ; Parse extension (3 chars)
         POP     D               ; Get FCB base back
@@ -576,9 +589,9 @@ EXCLR2:
         JNZ     EXCLR2
 
         ; Parse command tail into FCBs
-        ; CMDTAIL points to after the command name
-        ; Skip leading spaces first
-        LHLD    CMDTAIL
+        ; Use DBUFF+1 since EXTCPY copied the tail there
+        ; (Can't use CMDTAIL - it was overwritten by EXTCPY)
+        LXI     H, DBUFF+1
 EXSKLD:
         MOV     A, M
         ORA     A

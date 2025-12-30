@@ -86,8 +86,8 @@ Where A is current drive letter (A-P) and > is the prompt character.
 3. Load file at 0100h in 128-byte records (FUNC20)
 4. Check for overflow into CCP address space
 5. Set up program environment:
-   - Copy command tail (arguments only) to 0080h with length byte
-   - Clear and re-parse FCBs from command tail
+   - Copy command tail (arguments only) to DBUFF (0080h) with length byte
+   - Clear and re-parse FCBs from DBUFF+1 (the copied tail)
    - Set DMA to 0080h
 6. `CALL 0100h`
 
@@ -97,7 +97,22 @@ Where A is current drive letter (A-P) and > is the prompt character.
 - DBUFF+0 = length of arguments
 - DBUFF+1+ = argument string (spaces and all)
 
+**Important:** After EXTCPY copies the command tail to DBUFF, re-parse from DBUFF+1, NOT from CMDTAIL. The CMDTAIL pointer points into DBUFF where it gets overwritten during the copy.
+
 If DBUFF still contains "MBASIC" when MBASIC.COM runs, MBASIC will try to load "MBASIC.BAS" and fail with "File not found".
+
+## PARFCB - Filename Parsing
+
+Parses a filename from source (HL) into an FCB (DE).
+
+Key aspects:
+- Handles drive prefix (e.g., "B:FILE")
+- Pads filename to 8 chars with spaces
+- Pads extension to 3 chars with spaces
+- Converts to uppercase
+- Supports wildcards (* and ?)
+
+**Padding at PFEXT:** When parsing jumps from the filename loop to extension handling (on encountering '.'), the remaining filename bytes must be padded with spaces before calculating the extension offset.
 
 ## Internal Helper Functions
 

@@ -982,10 +982,11 @@ F22CLR:
         MOV     M, A            ; User number
         INX     H
         LHLD    CURFCB
-        INX     H               ; Skip drive byte
+        INX     H               ; Skip drive byte, HL = FCB+1 (source)
         XCHG                    ; DE = FCB+1
         POP     H
-        INX     H               ; Skip user byte
+        INX     H               ; HL = dir+1 (dest)
+        XCHG                    ; Now HL = FCB+1 (source), DE = dir+1 (dest)
         MVI     B, 11           ; Copy filename + type
         CALL    COPYB
         CALL    WRITEDIR
