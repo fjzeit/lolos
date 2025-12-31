@@ -3,8 +3,12 @@ name: Build and Test LOLOS
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'lode/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'lode/**'
 
 env:
   ZMAC_REPO: https://github.com/gp48k/zmac.git
