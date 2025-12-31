@@ -159,14 +159,49 @@ FTABLE:
         DW      FUNC40          ; 40 - Write random with zero fill
 
 ;-------------------------------------------------------------------------------
-; Console I/O Functions (0-11)
+; Console I/O Functions (0-12)
 ;-------------------------------------------------------------------------------
 
-; Function 0: System reset (warm boot)
+;-------------------------------------------------------------------------------
+; FUNC00 - System reset (BDOS Function 0)
+;-------------------------------------------------------------------------------
+; Description:
+;   Terminates the calling program and performs a warm boot. Reloads
+;   CCP and reinitializes page zero vectors.
+;
+; Input:
+;   C       - [REQ] Function number (0)
+;
+; Output:
+;   (none)  - Does not return
+;
+; Notes:
+;   - Equivalent to JMP 0000H
+;-------------------------------------------------------------------------------
+
 FUNC00:
         JMP     WBOOT
 
-; Function 1: Console input with echo
+;-------------------------------------------------------------------------------
+; FUNC01 - Console input with echo (BDOS Function 1)
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a character from the console, waiting if necessary. Echoes
+;   printable characters and CR/LF/TAB back to the console. Handles
+;   ^S (pause) and ^P (printer toggle) control characters.
+;
+; Input:
+;   C       - [REQ] Function number (1)
+;
+; Output:
+;   A       - ASCII character read
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC01:
         CALL    CONINW          ; Get character (with ^S/^P handling)
         PUSH    PSW
@@ -190,36 +225,123 @@ F01DN:
         MVI     H, 0
         JMP     SETRET
 
-; Function 2: Console output
+;-------------------------------------------------------------------------------
+; FUNC02 - Console output (BDOS Function 2)
+;-------------------------------------------------------------------------------
+; Description:
+;   Outputs a character to the console. If printer echo is enabled
+;   (via ^P), also sends the character to the list device.
+;
+; Input:
+;   C       - [REQ] Function number (2)
+;   E       - [REQ] ASCII character to output
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   A, BC, flags
+;-------------------------------------------------------------------------------
+
 FUNC02:
         MOV     C, E
         CALL    CONOUTW
         JMP     BFRET
 
-; Function 3: Auxiliary (reader) input
+;-------------------------------------------------------------------------------
+; FUNC03 - Auxiliary input (BDOS Function 3)
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a character from the auxiliary (reader) input device.
+;
+; Input:
+;   C       - [REQ] Function number (3)
+;
+; Output:
+;   A       - ASCII character read
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC03:
         CALL    BREADER
         MOV     L, A
         MVI     H, 0
         JMP     SETRET
 
-; Function 4: Auxiliary (punch) output
+;-------------------------------------------------------------------------------
+; FUNC04 - Auxiliary output (BDOS Function 4)
+;-------------------------------------------------------------------------------
+; Description:
+;   Outputs a character to the auxiliary (punch) output device.
+;
+; Input:
+;   C       - [REQ] Function number (4)
+;   E       - [REQ] ASCII character to output
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 FUNC04:
         MOV     C, E
         CALL    BPUNCH
         JMP     BFRET
 
-; Function 5: List (printer) output
+;-------------------------------------------------------------------------------
+; FUNC05 - List output (BDOS Function 5)
+;-------------------------------------------------------------------------------
+; Description:
+;   Outputs a character to the list (printer) device.
+;
+; Input:
+;   C       - [REQ] Function number (5)
+;   E       - [REQ] ASCII character to output
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 FUNC05:
         MOV     C, E
         CALL    BLIST
         JMP     BFRET
 
-; Function 6: Direct console I/O
-;   E = FF: Input if ready, else 0
-;   E = FE: Return status
-;   E = FD: Input, wait
-;   E = other: Output character
+;-------------------------------------------------------------------------------
+; FUNC06 - Direct console I/O (BDOS Function 6)
+;-------------------------------------------------------------------------------
+; Description:
+;   Provides raw console I/O without ^S/^P processing. Mode is
+;   determined by the value in E.
+;
+; Input:
+;   C       - [REQ] Function number (6)
+;   E       - [REQ] Mode/character:
+;             FFH = Input if ready, else return 0
+;             FEH = Return console status
+;             FDH = Input, wait for character
+;             00H-FCH = Output character E
+;
+; Output:
+;   A       - For input: character read (or 0 if not ready)
+;           - For status: 0=not ready, FFH=ready
+;           - For output: undefined
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC06:
         MOV     A, E
         CPI     0FFH
@@ -250,20 +372,71 @@ F06IN:
         MVI     H, 0
         JMP     SETRET
 
-; Function 7: Get IOBYTE
+;-------------------------------------------------------------------------------
+; FUNC07 - Get I/O byte (BDOS Function 7)
+;-------------------------------------------------------------------------------
+; Description:
+;   Returns the current value of the IOBYTE at address 0003H.
+;   IOBYTE controls device assignments for CON:, RDR:, PUN:, LST:.
+;
+; Input:
+;   C       - [REQ] Function number (7)
+;
+; Output:
+;   A       - Current IOBYTE value
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC07:
         LDA     IOBYTE
         MOV     L, A
         MVI     H, 0
         JMP     SETRET
 
-; Function 8: Set IOBYTE
+;-------------------------------------------------------------------------------
+; FUNC08 - Set I/O byte (BDOS Function 8)
+;-------------------------------------------------------------------------------
+; Description:
+;   Sets the IOBYTE at address 0003H to control device assignments.
+;
+; Input:
+;   C       - [REQ] Function number (8)
+;   E       - [REQ] New IOBYTE value
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 FUNC08:
         MOV     A, E
         STA     IOBYTE
         JMP     BFRET
 
-; Function 9: Print string ($ terminated)
+;-------------------------------------------------------------------------------
+; FUNC09 - Print string (BDOS Function 9)
+;-------------------------------------------------------------------------------
+; Description:
+;   Outputs a string to the console. The string is terminated by a '$'
+;   character (which is not printed). Uses CONOUTW for printer echo.
+;
+; Input:
+;   C       - [REQ] Function number (9)
+;   DE      - [REQ] Address of '$'-terminated string
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 FUNC09:
         XCHG                    ; HL = string address
 F09LP:
@@ -275,10 +448,33 @@ F09LP:
         INX     H
         JMP     F09LP
 
-; Function 10: Read console buffer
-;   DE = buffer address
-;   Buffer: byte 0 = max length, byte 1 = actual length (filled by BDOS)
-;   Characters stored starting at byte 2
+;-------------------------------------------------------------------------------
+; FUNC10 - Read console buffer (BDOS Function 10)
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a line of input from the console with editing support.
+;   Supports backspace/delete, ^U/^X (delete line), ^R (retype),
+;   ^E (physical end of line). Input terminates on CR or LF.
+;
+; Input:
+;   C       - [REQ] Function number (10)
+;   DE      - [REQ] Buffer address with format:
+;             Byte 0: Maximum characters to read (1-255)
+;             Byte 1: Actual count (filled by BDOS on return)
+;             Bytes 2+: Character data (filled by BDOS)
+;
+; Output:
+;   Buffer  - Byte 1 = actual character count (excluding CR)
+;           - Bytes 2+ = characters entered
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;
+; Notes:
+;   - CR/LF is echoed but not stored in buffer
+;   - ^C causes warm boot
+;-------------------------------------------------------------------------------
+
 FUNC10:
         XCHG                    ; HL = buffer address
         MOV     B, M            ; B = max length
@@ -423,14 +619,53 @@ F10DN:
         POP     B
         JMP     BFRET
 
-; Function 11: Console status
+;-------------------------------------------------------------------------------
+; FUNC11 - Console status (BDOS Function 11)
+;-------------------------------------------------------------------------------
+; Description:
+;   Returns the console input status. Handles ^S (pause) if a character
+;   is waiting.
+;
+; Input:
+;   C       - [REQ] Function number (11)
+;
+; Output:
+;   A       - 0 if no character ready, FFH if character ready
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC11:
         CALL    CONSTAT
         MOV     L, A
         MVI     H, 0
         JMP     SETRET
 
-; Function 12: Return version number
+;-------------------------------------------------------------------------------
+; FUNC12 - Return version number (BDOS Function 12)
+;-------------------------------------------------------------------------------
+; Description:
+;   Returns the CP/M version number. Used by programs to check
+;   compatibility.
+;
+; Input:
+;   C       - [REQ] Function number (12)
+;
+; Output:
+;   HL      - 0022H (CP/M 2.2)
+;   A       - 22H (low byte)
+;   B       - 00H (high byte)
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - H=00 indicates CP/M (vs MP/M), L=22H indicates version 2.2
+;-------------------------------------------------------------------------------
+
 FUNC12:
         LXI     H, 0022H        ; CP/M 2.2
         JMP     SETRET
@@ -439,14 +674,31 @@ FUNC12:
 ; Console Helper Routines
 ;-------------------------------------------------------------------------------
 
-; Print CR/LF
+; CRLF - Print carriage return and line feed
+; Input: (none)  Output: (none)  Clobbers: A, C
 CRLF:
         MVI     C, CR
         CALL    CONOUTW
         MVI     C, LF
         JMP     CONOUTW
 
-; Console input with ^S pause and ^P printer toggle handling
+;-------------------------------------------------------------------------------
+; CONINW - Console input with control character handling
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a character from console via BIOS. Handles ^S (pause until
+;   another key) and ^P (toggle printer echo flag).
+;
+; Input:
+;   (none)
+;
+; Output:
+;   A       - Character read (^S and ^P consumed, not returned)
+;
+; Clobbers:
+;   Flags
+;-------------------------------------------------------------------------------
+
 CONINW:
         CALL    BCONIN
         ANI     7FH             ; Strip high bit
@@ -464,7 +716,26 @@ COINRT:
 COINR2:
         RET
 
-; Console output with printer echo
+;-------------------------------------------------------------------------------
+; CONOUTW - Console output with printer echo
+;-------------------------------------------------------------------------------
+; Description:
+;   Outputs a character to the console via BIOS. If printer echo is
+;   enabled (PFLG set), also sends the character to the list device.
+;
+; Input:
+;   C       - [REQ] Character to output
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   A, flags
+;
+; Notes:
+;   - Preserves PSW across call
+;-------------------------------------------------------------------------------
+
 CONOUTW:
         PUSH    PSW
         CALL    BCONOUT
@@ -479,7 +750,23 @@ COUTR:
         POP     PSW
         RET
 
-; Console status (check for ^S)
+;-------------------------------------------------------------------------------
+; CONSTAT - Console status with pause handling
+;-------------------------------------------------------------------------------
+; Description:
+;   Checks console status via BIOS. If a character is waiting and it's
+;   ^S, pauses until another key is pressed.
+;
+; Input:
+;   (none)
+;
+; Output:
+;   A       - 0 if no character, FFH if character ready
+;
+; Clobbers:
+;   Flags
+;-------------------------------------------------------------------------------
+
 CONSTAT:
         CALL    BCONST
         ORA     A
@@ -497,7 +784,27 @@ CSTRT:
 ; Disk System Functions (13-40)
 ;-------------------------------------------------------------------------------
 
-; Function 13: Reset disk system
+;-------------------------------------------------------------------------------
+; FUNC13 - Reset disk system (BDOS Function 13)
+;-------------------------------------------------------------------------------
+; Description:
+;   Resets the disk subsystem. Selects drive A:, user 0, resets DMA
+;   to 0080H, clears the login and read-only vectors.
+;
+; Input:
+;   C       - [REQ] Function number (13)
+;
+; Output:
+;   CDISK   - Reset to 0 (drive A:)
+;   USERNO  - Reset to 0
+;   DMADDR  - Reset to 0080H
+;   LOGINV  - Cleared to 0
+;   ROVEC   - Cleared to 0
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 FUNC13:
         XRA     A
         STA     CDISK           ; Reset to drive A
@@ -513,7 +820,25 @@ FUNC13:
         SHLD    ROVEC
         JMP     BFRET
 
-; Function 14: Select disk
+;-------------------------------------------------------------------------------
+; FUNC14 - Select disk (BDOS Function 14)
+;-------------------------------------------------------------------------------
+; Description:
+;   Selects a disk drive as the default for subsequent file operations.
+;   Logs the drive in if not already logged, initializing its ALV.
+;
+; Input:
+;   C       - [REQ] Function number (14)
+;   E       - [REQ] Drive number (0=A, 1=B, ... 15=P)
+;
+; Output:
+;   CDISK   - Updated with selected drive
+;   LOGINV  - Bit set for selected drive
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 FUNC14:
         MOV     A, E
         ANI     0FH             ; Mask to 0-15
@@ -521,7 +846,25 @@ FUNC14:
         CALL    SELDRIVE        ; Select in BIOS and get DPH
         JMP     BFRET
 
-; Select drive - A = drive number, returns HL = DPH or 0
+;-------------------------------------------------------------------------------
+; SELDRIVE - Select drive and initialize if needed (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Selects a disk drive via BIOS and initializes its allocation vector
+;   if this is the first login. Updates the login vector.
+;
+; Input:
+;   A       - [REQ] Drive number (0=A, 1=B, etc.)
+;
+; Output:
+;   HL      - DPH address, or 0 if invalid drive
+;   CURDPH  - Updated with DPH address
+;   LOGINV  - Bit set for selected drive
+;
+; Clobbers:
+;   A, BC, DE, flags
+;-------------------------------------------------------------------------------
+
 SELDRIVE:
         MOV     C, A
         MVI     E, 0            ; First select
@@ -559,8 +902,33 @@ SELD3:
         LHLD    CURDPH
         RET
 
-; Function 15: Open file
-; Must find directory entry matching filename AND extent
+;-------------------------------------------------------------------------------
+; FUNC15 - Open file (BDOS Function 15)
+;-------------------------------------------------------------------------------
+; Description:
+;   Opens an existing file. Searches the directory for an entry matching
+;   the FCB filename and extent number. If found, copies the directory
+;   data (extent, S1, S2, RC, allocation map) into the FCB.
+;
+; Input:
+;   C       - [REQ] Function number (15)
+;   DE      - [REQ] FCB address (drive, filename, extent must be set)
+;
+; Output:
+;   A       - Directory code (0-3) on success, FFH if not found
+;   L       - Same as A
+;   H       - 0
+;   FCB     - On success: bytes 12-32 filled from directory entry
+;             CR (byte 32) cleared to 0
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Extent byte (FCB+12) must match directory entry
+;   - Drive byte: 0=default, 1=A:, 2=B:, etc.
+;-------------------------------------------------------------------------------
+
 FUNC15:
         CALL    SETFCB
         ; Get extent from user's FCB
@@ -611,8 +979,31 @@ F15NF:
 OPENEXT: DS     1               ; Requested extent for OPEN
 CLOSEXT: DS     1               ; Extent for CLOSE
 
-; Function 16: Close file
-; Must find directory entry matching filename AND extent
+;-------------------------------------------------------------------------------
+; FUNC16 - Close file (BDOS Function 16)
+;-------------------------------------------------------------------------------
+; Description:
+;   Closes an open file by writing the FCB data back to the directory.
+;   Searches for the directory entry matching filename and extent,
+;   then updates it with the FCB's allocation map and record count.
+;
+; Input:
+;   C       - [REQ] Function number (16)
+;   DE      - [REQ] FCB address
+;
+; Output:
+;   A       - 0 on success, FFH if not found
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Must match both filename and extent number
+;   - Updates EX, S1, S2, RC and allocation map in directory
+;-------------------------------------------------------------------------------
+
 FUNC16:
         CALL    SETFCB
         ; Get extent from user's FCB
@@ -657,14 +1048,62 @@ F16NF:
         MVI     H, 0
         JMP     SETRET
 
-; Function 17: Search for first
+;-------------------------------------------------------------------------------
+; FUNC17 - Search for first (BDOS Function 17)
+;-------------------------------------------------------------------------------
+; Description:
+;   Searches the directory for the first entry matching the FCB filename.
+;   Wildcards ('?') in the FCB match any character. The matching
+;   directory sector is copied to the DMA buffer.
+;
+; Input:
+;   C       - [REQ] Function number (17)
+;   DE      - [REQ] FCB address with filename pattern
+;
+; Output:
+;   A       - Directory code (0-3) indicating entry position, FFH if not found
+;   L       - Same as A
+;   H       - 0
+;   DMA     - 128-byte directory sector containing match (if found)
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Sets SEARCHI for subsequent Search Next calls
+;   - '?' in FCB byte 0 matches all user numbers
+;-------------------------------------------------------------------------------
+
 FUNC17:
         CALL    SETFCB
         XRA     A
         STA     SEARCHI         ; Start from entry 0
         ; Fall through to search next
 
-; Function 18: Search for next
+;-------------------------------------------------------------------------------
+; FUNC18 - Search for next (BDOS Function 18)
+;-------------------------------------------------------------------------------
+; Description:
+;   Continues a directory search started by Search First (F17). Returns
+;   the next matching entry.
+;
+; Input:
+;   C       - [REQ] Function number (18)
+;   (implicit) - SEARCHI from previous F17 or F18 call
+;
+; Output:
+;   A       - Directory code (0-3), FFH if no more matches
+;   L       - Same as A
+;   H       - 0
+;   DMA     - 128-byte directory sector containing match (if found)
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Must be preceded by F17 or another F18 call
+;-------------------------------------------------------------------------------
+
 FUNC18:
         CALL    SEARCH
         CPI     0FFH
@@ -685,7 +1124,29 @@ F18NF:
         MVI     H, 0
         JMP     SETRET
 
-; Function 19: Delete file
+;-------------------------------------------------------------------------------
+; FUNC19 - Delete file (BDOS Function 19)
+;-------------------------------------------------------------------------------
+; Description:
+;   Deletes all directory entries matching the FCB filename pattern.
+;   Wildcards are supported for deleting multiple files.
+;
+; Input:
+;   C       - [REQ] Function number (19)
+;   DE      - [REQ] FCB address with filename pattern
+;
+; Output:
+;   A       - 0 on success
+;   L       - Same as A
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Marks entries with E5H (deleted)
+;   - Does not free disk blocks (freed on next INITALV)
+;-------------------------------------------------------------------------------
+
 FUNC19:
         CALL    SETFCB
         XRA     A
@@ -703,7 +1164,32 @@ F19DN:
         MVI     L, 0
         JMP     SETRET
 
-; Function 20: Read sequential
+;-------------------------------------------------------------------------------
+; FUNC20 - Read sequential (BDOS Function 20)
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads the next 128-byte record from the file. Automatically advances
+;   to the next extent when the current extent is exhausted.
+;
+; Input:
+;   C       - [REQ] Function number (20)
+;   DE      - [REQ] FCB address (must be opened)
+;
+; Output:
+;   A       - 0 on success, 1 on EOF/error
+;   L       - Same as A
+;   H       - 0
+;   DMA     - 128 bytes of file data (on success)
+;   FCB     - CR incremented, extent updated if needed
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - CR (FCB+32) is the current record within extent
+;   - Extent auto-advances when CR reaches 128
+;-------------------------------------------------------------------------------
+
 FUNC20:
         CALL    SETFCB
         LHLD    CURFCB
@@ -808,7 +1294,33 @@ F20OC2:
         XRA     A               ; Return 0 = success
         RET
 
-; Function 21: Write sequential
+;-------------------------------------------------------------------------------
+; FUNC21 - Write sequential (BDOS Function 21)
+;-------------------------------------------------------------------------------
+; Description:
+;   Writes a 128-byte record to the file at the current position.
+;   Allocates new blocks as needed. Automatically creates a new extent
+;   when the current one fills (128 records).
+;
+; Input:
+;   C       - [REQ] Function number (21)
+;   DE      - [REQ] FCB address (must be opened or created)
+;   DMA     - 128 bytes of data to write
+;
+; Output:
+;   A       - 0 on success, 1 on error (disk full)
+;   L       - Same as A
+;   H       - 0
+;   FCB     - CR incremented, RC/extent updated
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Closes current extent and creates new one at 128 records
+;   - Allocates blocks from allocation vector as needed
+;-------------------------------------------------------------------------------
+
 FUNC21:
         CALL    SETFCB
         LHLD    CURFCB
@@ -957,7 +1469,30 @@ F21MER:
         MVI     A, 1
         RET
 
-; Function 22: Make file
+;-------------------------------------------------------------------------------
+; FUNC22 - Make file (BDOS Function 22)
+;-------------------------------------------------------------------------------
+; Description:
+;   Creates a new file in the directory. Finds a free directory entry
+;   and initializes it with the FCB's filename and user number.
+;
+; Input:
+;   C       - [REQ] Function number (22)
+;   DE      - [REQ] FCB address (filename set)
+;
+; Output:
+;   A       - Directory code (0-3) on success, FFH if directory full
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - File is created with zero length (no blocks allocated)
+;   - EX, S1, S2, RC, and allocation map are zeroed
+;-------------------------------------------------------------------------------
+
 FUNC22:
         CALL    SETFCB
         ; Find free directory entry
@@ -997,7 +1532,31 @@ F22ERR:
         MVI     H, 0
         JMP     SETRET
 
-; Function 23: Rename file
+;-------------------------------------------------------------------------------
+; FUNC23 - Rename file (BDOS Function 23)
+;-------------------------------------------------------------------------------
+; Description:
+;   Renames files matching the pattern. The new name is taken from
+;   the second half of the FCB (bytes 17-27).
+;
+; Input:
+;   C       - [REQ] Function number (23)
+;   DE      - [REQ] FCB address:
+;             Bytes 1-11: Old filename pattern (wildcards allowed)
+;             Bytes 17-27: New filename
+;
+; Output:
+;   A       - 0 on success
+;   L       - Same as A
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - All matching entries are renamed
+;   - Wildcards in old name match multiple files
+;-------------------------------------------------------------------------------
+
 FUNC23:
         CALL    SETFCB
         XRA     A
@@ -1023,19 +1582,72 @@ F23DN:
         MVI     L, 0
         JMP     SETRET
 
-; Function 24: Return login vector
+;-------------------------------------------------------------------------------
+; FUNC24 - Return login vector (BDOS Function 24)
+;-------------------------------------------------------------------------------
+; Description:
+;   Returns a bitmap indicating which drives are currently logged in.
+;   Bit 0 = A:, bit 1 = B:, etc.
+;
+; Input:
+;   C       - [REQ] Function number (24)
+;
+; Output:
+;   HL      - Login vector (bit set = drive logged in)
+;   A       - Low byte of login vector
+;   B       - High byte of login vector
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC24:
         LHLD    LOGINV
         JMP     SETRET
 
-; Function 25: Return current disk
+;-------------------------------------------------------------------------------
+; FUNC25 - Return current disk (BDOS Function 25)
+;-------------------------------------------------------------------------------
+; Description:
+;   Returns the currently selected default disk number.
+;
+; Input:
+;   C       - [REQ] Function number (25)
+;
+; Output:
+;   A       - Current disk (0=A, 1=B, etc.)
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC25:
         LDA     CDISK
         MOV     L, A
         MVI     H, 0
         JMP     SETRET
 
-; Function 26: Set DMA address
+;-------------------------------------------------------------------------------
+; FUNC26 - Set DMA address (BDOS Function 26)
+;-------------------------------------------------------------------------------
+; Description:
+;   Sets the DMA (Direct Memory Access) address for subsequent disk
+;   and directory operations. The 128-byte buffer at this address
+;   is used for file I/O.
+;
+; Input:
+;   C       - [REQ] Function number (26)
+;   DE      - [REQ] DMA buffer address
+;
+; Output:
+;   DMADDR  - Updated with new address
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 FUNC26:
         XCHG
         SHLD    DMADDR
@@ -1045,7 +1657,29 @@ FUNC26:
         CALL    BSETDMA
         JMP     BFRET
 
-; Function 27: Get allocation vector address
+;-------------------------------------------------------------------------------
+; FUNC27 - Get allocation vector address (BDOS Function 27)
+;-------------------------------------------------------------------------------
+; Description:
+;   Returns the address of the allocation vector (ALV) for the current
+;   disk. The ALV is a bitmap where each bit represents one disk block.
+;
+; Input:
+;   C       - [REQ] Function number (27)
+;
+; Output:
+;   HL      - ALV address
+;   A       - Low byte of address
+;   B       - High byte of address
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Returns 0 if no disk selected
+;   - ALV pointer is at DPH+14
+;-------------------------------------------------------------------------------
+
 FUNC27:
         LHLD    CURDPH
         MOV     A, H
@@ -1059,7 +1693,26 @@ FUNC27:
         MOV     L, A
         JMP     SETRET
 
-; Function 28: Write protect current disk
+;-------------------------------------------------------------------------------
+; FUNC28 - Write protect disk (BDOS Function 28)
+;-------------------------------------------------------------------------------
+; Description:
+;   Sets the current disk as read-only. Subsequent write attempts
+;   will fail until the disk is reset.
+;
+; Input:
+;   C       - [REQ] Function number (28)
+;
+; Output:
+;   ROVEC   - Bit set for current drive
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;
+; Notes:
+;   - Reset via F13 (Reset Disk System) or F37 (Reset Drive)
+;-------------------------------------------------------------------------------
+
 FUNC28:
         LDA     CDISK
         MOV     C, A
@@ -1079,12 +1732,52 @@ F28DN:
         STA     ROVEC
         JMP     BFRET
 
-; Function 29: Get R/O vector
+;-------------------------------------------------------------------------------
+; FUNC29 - Get R/O vector (BDOS Function 29)
+;-------------------------------------------------------------------------------
+; Description:
+;   Returns a bitmap indicating which drives are write-protected.
+;   Bit 0 = A:, bit 1 = B:, etc.
+;
+; Input:
+;   C       - [REQ] Function number (29)
+;
+; Output:
+;   HL      - R/O vector (bit set = read-only)
+;   A       - Low byte
+;   B       - High byte
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC29:
         LHLD    ROVEC
         JMP     SETRET
 
-; Function 30: Set file attributes
+;-------------------------------------------------------------------------------
+; FUNC30 - Set file attributes (BDOS Function 30)
+;-------------------------------------------------------------------------------
+; Description:
+;   Updates the attribute bits (high bits of T1-T3) in the directory
+;   from the FCB. Used to set Read-Only and System attributes.
+;
+; Input:
+;   C       - [REQ] Function number (30)
+;   DE      - [REQ] FCB address with attributes set in bytes 9-11
+;             Bit 7 of T1 (byte 9): Read-Only
+;             Bit 7 of T2 (byte 10): System
+;             Bit 7 of T3 (byte 11): Archive
+;
+; Output:
+;   A       - 0 on success, FFH if file not found
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC30:
         ; Copy attribute bits from FCB to directory
         CALL    SETFCB
@@ -1113,7 +1806,29 @@ F30NF:
         MVI     H, 0
         JMP     SETRET
 
-; Function 31: Get DPB address
+;-------------------------------------------------------------------------------
+; FUNC31 - Get DPB address (BDOS Function 31)
+;-------------------------------------------------------------------------------
+; Description:
+;   Returns the address of the Disk Parameter Block (DPB) for the
+;   current disk. The DPB contains disk geometry parameters.
+;
+; Input:
+;   C       - [REQ] Function number (31)
+;
+; Output:
+;   HL      - DPB address
+;   A       - Low byte
+;   B       - High byte
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Returns 0 if no disk selected
+;   - DPB pointer is at DPH+10
+;-------------------------------------------------------------------------------
+
 FUNC31:
         LHLD    CURDPH
         MOV     A, H
@@ -1127,7 +1842,26 @@ FUNC31:
         MOV     L, A
         JMP     SETRET
 
-; Function 32: Get/set user code
+;-------------------------------------------------------------------------------
+; FUNC32 - Get/set user code (BDOS Function 32)
+;-------------------------------------------------------------------------------
+; Description:
+;   Gets or sets the current user number. User numbers (0-15) provide
+;   separate file namespaces on the same disk.
+;
+; Input:
+;   C       - [REQ] Function number (32)
+;   E       - [REQ] FFH to get current user, 0-15 to set user
+;
+; Output:
+;   A       - Current user number (if E=FFH on input)
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;-------------------------------------------------------------------------------
+
 FUNC32:
         MOV     A, E
         CPI     0FFH            ; Get user?
@@ -1141,7 +1875,32 @@ F32SET:
         STA     USERNO
         JMP     BFRET
 
-; Function 33: Read random
+;-------------------------------------------------------------------------------
+; FUNC33 - Read random (BDOS Function 33)
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a record at the position specified by the random record
+;   field (FCB bytes 33-35). Does not advance the record pointer.
+;
+; Input:
+;   C       - [REQ] Function number (33)
+;   DE      - [REQ] FCB address (must be opened, R0-R2 set)
+;
+; Output:
+;   A       - 0 on success, 1 on seek error, 3 on close error,
+;             4 on seek to unwritten extent, 6 on seek past end
+;   L       - Same as A
+;   H       - 0
+;   DMA     - 128 bytes of file data (on success)
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Random record is 24-bit: R0 (LSB), R1, R2 (MSB)
+;   - Converts to extent/CR internally
+;-------------------------------------------------------------------------------
+
 FUNC33:
         CALL    SETFCB
         CALL    RNDREC          ; Convert random record to extent/record
@@ -1155,7 +1914,32 @@ FUNC33:
         MVI     H, 0
         JMP     SETRET
 
-; Function 34: Write random
+;-------------------------------------------------------------------------------
+; FUNC34 - Write random (BDOS Function 34)
+;-------------------------------------------------------------------------------
+; Description:
+;   Writes a record at the position specified by the random record
+;   field (FCB bytes 33-35). Allocates blocks as needed.
+;
+; Input:
+;   C       - [REQ] Function number (34)
+;   DE      - [REQ] FCB address (must be opened, R0-R2 set)
+;   DMA     - 128 bytes of data to write
+;
+; Output:
+;   A       - 0 on success, 1 on seek error, 2 on disk full,
+;             5 on directory full (new extent needed)
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Creates sparse files (unwritten blocks not allocated)
+;   - Random record is 24-bit: R0 (LSB), R1, R2 (MSB)
+;-------------------------------------------------------------------------------
+
 FUNC34:
         CALL    SETFCB
         CALL    RNDREC          ; Convert random record to extent/record
@@ -1169,7 +1953,28 @@ FUNC34:
         MVI     H, 0
         JMP     SETRET
 
-; Function 35: Compute file size
+;-------------------------------------------------------------------------------
+; FUNC35 - Compute file size (BDOS Function 35)
+;-------------------------------------------------------------------------------
+; Description:
+;   Calculates the file size in 128-byte records and stores the result
+;   in the random record field (FCB bytes 33-35). Scans all extents.
+;
+; Input:
+;   C       - [REQ] Function number (35)
+;   DE      - [REQ] FCB address (filename set)
+;
+; Output:
+;   FCB     - Bytes 33-35 (R0-R2) set to file size in records
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;
+; Notes:
+;   - Searches all extents to find the highest record
+;   - Size = (max_extent * 128) + max_RC
+;-------------------------------------------------------------------------------
+
 FUNC35:
         ; Set random record field to file size
         CALL    SETFCB
@@ -1225,7 +2030,28 @@ F35DN:
         MVI     M, 0            ; R2 = 0
         JMP     BFRET
 
-; Function 36: Set random record from sequential position
+;-------------------------------------------------------------------------------
+; FUNC36 - Set random record (BDOS Function 36)
+;-------------------------------------------------------------------------------
+; Description:
+;   Sets the random record field (FCB bytes 33-35) from the current
+;   sequential position (extent and CR).
+;
+; Input:
+;   C       - [REQ] Function number (36)
+;   DE      - [REQ] FCB address
+;
+; Output:
+;   FCB     - Bytes 33-35 (R0-R2) set from extent*128 + CR
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;
+; Notes:
+;   - Allows switching from sequential to random access
+;   - Random record = (EX * 128) + CR
+;-------------------------------------------------------------------------------
+
 FUNC36:
         CALL    SETFCB
         LHLD    CURFCB
@@ -1258,7 +2084,28 @@ FUNC36:
         MVI     M, 0            ; R2
         JMP     BFRET
 
-; Function 37: Reset drive
+;-------------------------------------------------------------------------------
+; FUNC37 - Reset drive (BDOS Function 37)
+;-------------------------------------------------------------------------------
+; Description:
+;   Resets specified drives by clearing their login and R/O bits.
+;   The drive bitmap specifies which drives to reset.
+;
+; Input:
+;   C       - [REQ] Function number (37)
+;   DE      - [REQ] Drive bitmap (bit 0=A:, bit 1=B:, etc.)
+;
+; Output:
+;   LOGINV  - Specified bits cleared
+;   ROVEC   - Specified bits cleared
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;
+; Notes:
+;   - Drives will be re-logged on next access (ALV rebuilt)
+;-------------------------------------------------------------------------------
+
 FUNC37:
         ; DE = drive bitmap - reset specified drives
         XCHG
@@ -1279,7 +2126,30 @@ FUNC37:
         STA     ROVEC
         JMP     BFRET
 
-; Function 40: Write random with zero fill
+;-------------------------------------------------------------------------------
+; FUNC40 - Write random with zero fill (BDOS Function 40)
+;-------------------------------------------------------------------------------
+; Description:
+;   Same as Write Random (F34), but fills unallocated blocks with zeros
+;   instead of leaving them as garbage. Prevents data leakage.
+;
+; Input:
+;   C       - [REQ] Function number (40)
+;   DE      - [REQ] FCB address (must be opened, R0-R2 set)
+;   DMA     - 128 bytes of data to write
+;
+; Output:
+;   A       - 0 on success, 1 on seek error, 2 on disk full
+;   L       - Same as A
+;   H       - 0
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Currently implemented same as F34 (zero fill not done)
+;-------------------------------------------------------------------------------
+
 FUNC40:
         ; Same as write random, but fills unallocated blocks with zeros
         ; For now, same as regular write
@@ -1289,7 +2159,25 @@ FUNC40:
 ; Disk I/O Helper Routines
 ;-------------------------------------------------------------------------------
 
-; Set up FCB pointer from DE parameter
+;-------------------------------------------------------------------------------
+; SETFCB - Set up FCB pointer and select drive (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Initializes CURFCB from PARAM and selects the drive specified in
+;   the FCB (or default drive if FCB byte 0 is 0).
+;
+; Input:
+;   PARAM   - [REQ] FCB address (set by BDOS entry)
+;
+; Output:
+;   CURFCB  - Set to FCB address
+;   CURDSK  - Set to drive number
+;   CURDPH  - Set via SELDRIVE
+;
+; Clobbers:
+;   A, BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 SETFCB:
         LHLD    PARAM
         SHLD    CURFCB
@@ -1306,8 +2194,29 @@ SFSEL:
         CALL    SELDRIVE
         RET
 
-; Search for directory entry matching FCB
-; Returns A = directory code (0-3) or FF if not found
+;-------------------------------------------------------------------------------
+; SEARCH - Search directory for matching FCB entry (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Scans directory starting from SEARCHI for an entry matching CURFCB.
+;   Supports '?' wildcards. Skips deleted (E5H) entries and entries
+;   with non-matching user numbers.
+;
+; Input:
+;   CURFCB  - [REQ] FCB with search pattern
+;   SEARCHI - [REQ] Starting directory index
+;   USERNO  - [REQ] Current user number
+;
+; Output:
+;   A       - Directory code (0-3) if found, FFH if not found
+;   SEARCHI - Updated to next entry (for Search Next)
+;   DIRPTR  - Points to matched entry in DIRBUF
+;   DIRBUF  - Contains directory sector
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 SEARCH:
         LDA     SEARCHI
 SRCHLP:
@@ -1421,8 +2330,25 @@ SRCHNF:
         MVI     A, 0FFH         ; Not found
         RET
 
-; Find free directory entry
-; Returns A = directory code or FF if full
+;-------------------------------------------------------------------------------
+; FINDFREE - Find free directory entry (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Scans directory for a free (E5H) entry for creating new files.
+;
+; Input:
+;   CURDPH  - [REQ] Current disk's DPH
+;
+; Output:
+;   A       - Directory code (0-3) if found, FFH if directory full
+;   DIRSEC  - Sector containing free entry
+;   DIRENT  - Entry index within sector
+;   DIRBUF  - Contains directory sector
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 FINDFREE:
         XRA     A
 FFREELP:
@@ -1484,8 +2410,8 @@ FFREENF:
         MVI     A, 0FFH
         RET
 
-; Get pointer to current directory entry in buffer
-; Returns HL = pointer
+; GETDIRENT - Get pointer to directory entry in DIRBUF
+; Input: DIRENT=entry index (0-3)  Output: HL=pointer  Clobbers: A, DE, flags
 GETDIRENT:
         ; Calculate pointer to directory entry in DIRBUF
         ; Entry 0: offset 0, Entry 1: offset 32, Entry 2: offset 64, Entry 3: offset 96
@@ -1502,9 +2428,28 @@ GETDIRENT:
         DAD     D
         RET
 
-; Read directory sector
-; DIRSEC = sector number within directory
-; Returns A = 0 if OK
+;-------------------------------------------------------------------------------
+; READDIR - Read directory sector from disk (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads the directory sector specified by DIRSEC into DIRBUF. Sets up
+;   BIOS with track (reserved tracks) and translated sector.
+;
+; Input:
+;   DIRSEC  - [REQ] Logical sector number within directory
+;   CURDPH  - [REQ] Current disk's DPH
+;
+; Output:
+;   A       - 0 on success, non-0 on error
+;   DIRBUF  - 128 bytes of directory data
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;
+; Notes:
+;   - Temporarily changes DMA to DIRBUF, restores DMADDR after
+;-------------------------------------------------------------------------------
+
 READDIR:
         ; Calculate absolute sector
         ; Dir starts at track OFF (reserved tracks)
@@ -1559,7 +2504,25 @@ READDIR:
         POP     PSW
         RET
 
-; Write current directory sector
+;-------------------------------------------------------------------------------
+; WRITEDIR - Write directory sector to disk (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Writes DIRBUF back to the directory sector specified by DIRSEC.
+;   Used after modifying directory entries.
+;
+; Input:
+;   DIRSEC  - [REQ] Logical sector number within directory
+;   CURDPH  - [REQ] Current disk's DPH
+;   DIRBUF  - [REQ] 128 bytes of directory data
+;
+; Output:
+;   A       - 0 on success, non-0 on error
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 WRITEDIR:
         LHLD    CURDPH
         MOV     A, H
@@ -1607,9 +2570,27 @@ WRITEDIR:
         POP     PSW
         RET
 
-; Read record from file
-; A = record number within extent
-; Returns A = 0 if OK, 1 if error/EOF
+;-------------------------------------------------------------------------------
+; READREC - Read record from file (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a 128-byte record from the current file. Checks record count,
+;   gets block from allocation map, converts to physical address, and
+;   reads via BIOS.
+;
+; Input:
+;   A       - [REQ] Record number within extent (0-127)
+;   CURFCB  - [REQ] Current FCB
+;   DMADDR  - [REQ] DMA buffer address
+;
+; Output:
+;   A       - 0 on success, 1 on EOF/error
+;   DMA     - 128 bytes of data (on success)
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 READREC:
         STA     RECREQ
         ; Check if record is beyond file size (RC)
@@ -1641,9 +2622,26 @@ RRECEOF:
         MVI     A, 1
         RET
 
-; Write record to file
-; A = record number within extent
-; Returns A = 0 if OK, 1 if error
+;-------------------------------------------------------------------------------
+; WRITEREC - Write record to file (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Writes a 128-byte record to the current file. Allocates a new block
+;   if needed, updates the FCB allocation map and record count.
+;
+; Input:
+;   A       - [REQ] Record number within extent (0-127)
+;   CURFCB  - [REQ] Current FCB
+;   DMADDR  - [REQ] DMA buffer with data
+;
+; Output:
+;   A       - 0 on success, 1 on error (disk full)
+;   FCB     - RC updated if record extends file
+;
+; Clobbers:
+;   BC, DE, HL, flags
+;-------------------------------------------------------------------------------
+
 WRITEREC:
         STA     RECREQ
         CALL    GETBLOCK
@@ -1680,8 +2678,8 @@ WRECERR:
         MVI     A, 1
         RET
 
-; Get block number for current record
-; Returns HL = block number
+; GETBLOCK - Get block number for record from FCB allocation map
+; Input: RECREQ=record, CURFCB  Output: HL=block (0=unallocated)  Clobbers: A, BC, DE, flags
 GETBLOCK:
         LDA     RECREQ
         RRC
@@ -1698,7 +2696,8 @@ GETBLOCK:
         MVI     H, 0
         RET
 
-; Store block number in FCB allocation map
+; PUTBLOCK - Store block number in FCB allocation map
+; Input: HL=block, RECREQ=record, CURFCB  Output: (FCB updated)  Clobbers: A, BC, DE, HL, flags
 PUTBLOCK:
         SHLD    TEMP16
         LDA     RECREQ
@@ -1716,8 +2715,23 @@ PUTBLOCK:
         MOV     M, A
         RET
 
-; Allocate a new block
-; Returns HL = block number or 0 if full
+;-------------------------------------------------------------------------------
+; ALLOCBLK - Allocate a new disk block (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Scans the allocation vector for a free block (bit=0), marks it as
+;   used, and returns the block number.
+;
+; Input:
+;   CURDPH  - [REQ] Current disk's DPH (for ALV and DPB)
+;
+; Output:
+;   HL      - Block number (1-DSM), or 0 if disk full
+;
+; Clobbers:
+;   A, BC, DE, flags
+;-------------------------------------------------------------------------------
+
 ALLOCBLK:
         ; Scan allocation vector for free block
         LHLD    CURDPH
@@ -1778,8 +2792,23 @@ ABLKERR:
         LXI     H, 0
         RET
 
-; Initialize allocation vector for current drive
-; Called when drive is first logged in
+;-------------------------------------------------------------------------------
+; INITALV - Initialize allocation vector for drive (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Clears the ALV and rebuilds it by scanning all directory entries.
+;   Called when a drive is first logged in.
+;
+; Input:
+;   CURDPH  - [REQ] Current disk's DPH
+;
+; Output:
+;   ALV     - Rebuilt with all used blocks marked
+;
+; Clobbers:
+;   All registers
+;-------------------------------------------------------------------------------
+
 INITALV:
         ; Get ALV address from DPH
         LHLD    CURDPH
@@ -1929,8 +2958,8 @@ IALNXT:
 IALDON:
         RET
 
-; Get bit for block HL in ALV
-; Returns Z if free (0), NZ if used (1)
+; GETBIT - Test bit for block HL in allocation vector
+; Input: HL=block, ALVPTR  Output: Z=free(0), NZ=used(1)  Clobbers: A,BC,DE
 GETBIT:
         ; Byte = block / 8, bit = block mod 8
         MOV     A, L
@@ -1972,7 +3001,8 @@ GBITDN:
         ANA     C
         RET
 
-; Set bit for block HL in ALV
+; SETBIT - Set bit for block HL in allocation vector (mark used)
+; Input: HL=block, ALVPTR  Output: (ALV updated)  Clobbers: A,BC,DE
 SETBIT:
         MOV     A, L
         ANI     07H
@@ -2015,8 +3045,26 @@ SBITDN:
         MOV     M, A
         RET
 
-; Convert block number to track/sector and set BIOS params
-; HL = block number
+;-------------------------------------------------------------------------------
+; BLKTOSEC - Convert block to track/sector and set BIOS (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Converts a block number and record offset to physical track/sector.
+;   Sets BIOS track, sector (translated), and DMA address.
+;
+; Input:
+;   HL      - [REQ] Block number
+;   RECREQ  - [REQ] Record number (mod 8 used for offset within block)
+;   CURDPH  - [REQ] Current disk's DPH
+;   DMADDR  - [REQ] DMA buffer address
+;
+; Output:
+;   (BIOS)  - Track, sector, DMA configured for read/write
+;
+; Clobbers:
+;   All registers
+;-------------------------------------------------------------------------------
+
 BLKTOSEC:
         SHLD    TEMP16
         ; Sector = block * (block_size/128) + record_within_block
@@ -2138,7 +3186,27 @@ DIVDN:
         CALL    BSETDMA
         RET
 
-; Convert random record to extent/CR
+;-------------------------------------------------------------------------------
+; RNDREC - Convert random record to extent and CR (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Converts the 24-bit random record number (FCB bytes 33-35) to
+;   extent and current record (CR) for random access operations.
+;
+; Input:
+;   CURFCB  - [REQ] FCB with random record field set
+;
+; Output:
+;   FCB     - Extent (byte 12) and CR (byte 32) updated
+;
+; Clobbers:
+;   A, DE, HL, flags
+;
+; Notes:
+;   - Extent = random_record / 128
+;   - CR = random_record mod 128
+;-------------------------------------------------------------------------------
+
 RNDREC:
         LHLD    CURFCB
         LXI     D, 33
@@ -2175,7 +3243,8 @@ RNDREC:
         XRA     A               ; Return success
         RET
 
-; Copy B bytes from HL to DE
+; COPYB - Copy B bytes from HL to DE
+; Input: B=count, HL=source, DE=dest  Output: HL,DE advanced  Clobbers: A, B, flags
 COPYB:
         MOV     A, M
         STAX    D

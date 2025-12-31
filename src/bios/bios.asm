@@ -77,6 +77,27 @@ SIGNON: DB      0DH, 0AH
 ;-------------------------------------------------------------------------------
 ; BOOT - Cold boot initialization
 ;-------------------------------------------------------------------------------
+; Description:
+;   Performs initial system startup. Clears page zero state (CDISK, IOBYTE),
+;   displays signon message, initializes warm boot and BDOS entry vectors
+;   at addresses 0000H and 0005H, then transfers control to CCP.
+;
+; Input:
+;   (none)  - [---] Called by boot loader after system load
+;
+; Output:
+;   (0000H) - JMP WBOOT vector installed
+;   (0005H) - JMP BDOS+6 vector installed
+;   CDISK   - Cleared to 0 (drive A:, user 0)
+;   IOBYTE  - Cleared to 0
+;
+; Clobbers:
+;   All registers
+;
+; Notes:
+;   - Does not return; transfers to CCP
+;   - Sets default DMA to 0080H
+;-------------------------------------------------------------------------------
 
 BOOT:
         XRA     A               ; Zero accumulator
@@ -113,6 +134,28 @@ GOCPM:
 ;-------------------------------------------------------------------------------
 ; WBOOT - Warm boot (reload CCP and BDOS)
 ;-------------------------------------------------------------------------------
+; Description:
+;   Reinitializes the system after a transient program terminates. Sets up
+;   stack, reinstalls page zero vectors for warm boot (0000H) and BDOS
+;   (0005H), then transfers control to CCP with current disk selection.
+;
+; Input:
+;   (none)  - [---] Called via JMP 0000H
+;
+; Output:
+;   (0000H) - JMP WBOOT vector installed
+;   (0005H) - JMP BDOS+6 vector installed
+;   SP      - Set to 0080H
+;
+; Clobbers:
+;   All registers
+;
+; Notes:
+;   - Does not return; transfers to CCP
+;   - Preserves current disk from CDISK
+;   - Sets default DMA to 0080H
+;   - Full CP/M would reload CCP+BDOS from disk; this version skips reload
+;-------------------------------------------------------------------------------
 
 WBOOT:
         LXI     SP, 0080H       ; Temporary stack in page zero
@@ -140,9 +183,22 @@ WBOOT:
 ; Console I/O Functions
 ;-------------------------------------------------------------------------------
 
+;-------------------------------------------------------------------------------
 ; CONST - Return console status
-;   Returns: A = 00H if no character ready
-;            A = FFH if character ready
+;-------------------------------------------------------------------------------
+; Description:
+;   Checks if a character is available from the console input device.
+;   Non-blocking status check.
+;
+; Input:
+;   (none)  - [---]
+;
+; Output:
+;   A       - 00H if no character ready, FFH if character ready
+;
+; Clobbers:
+;   Flags
+;-------------------------------------------------------------------------------
 
 CONST:
         IN      CONSTA          ; Read console status
@@ -151,8 +207,23 @@ CONST:
         MVI     A, 0FFH         ; Return FF if ready
         RET
 
-; CONIN - Read character from console (wait for input)
-;   Returns: A = character
+;-------------------------------------------------------------------------------
+; CONIN - Read character from console
+;-------------------------------------------------------------------------------
+; Description:
+;   Waits for and reads a character from the console input device.
+;   Blocks until a character is available. Strips high bit (parity).
+;   Converts DEL (7FH) to backspace (08H) for editing compatibility.
+;
+; Input:
+;   (none)  - [---]
+;
+; Output:
+;   A       - ASCII character (00H-7EH, or 08H for DEL)
+;
+; Clobbers:
+;   Flags
+;-------------------------------------------------------------------------------
 
 CONIN:
         IN      CONSTA          ; Check status
@@ -165,8 +236,21 @@ CONIN:
         MVI     A, 08H          ; Convert DEL to BS
         RET
 
+;-------------------------------------------------------------------------------
 ; CONOUT - Write character to console
-;   Input: C = character to output
+;-------------------------------------------------------------------------------
+; Description:
+;   Outputs a single character to the console display device.
+;
+; Input:
+;   C       - [REQ] ASCII character to output
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   A
+;-------------------------------------------------------------------------------
 
 CONOUT:
         MOV     A, C
@@ -177,16 +261,42 @@ CONOUT:
 ; Auxiliary I/O Functions
 ;-------------------------------------------------------------------------------
 
+;-------------------------------------------------------------------------------
 ; LIST - Send character to printer
-;   Input: C = character
+;-------------------------------------------------------------------------------
+; Description:
+;   Outputs a character to the list (printer) device.
+;
+; Input:
+;   C       - [REQ] ASCII character to output
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   A
+;-------------------------------------------------------------------------------
 
 LIST:
         MOV     A, C
         OUT     PRTDAT
         RET
 
+;-------------------------------------------------------------------------------
 ; LISTST - Return printer status
-;   Returns: A = 00H if not ready, FFH if ready
+;-------------------------------------------------------------------------------
+; Description:
+;   Checks if the list (printer) device is ready to accept a character.
+;
+; Input:
+;   (none)  - [---]
+;
+; Output:
+;   A       - 00H if not ready, FFH if ready
+;
+; Clobbers:
+;   Flags
+;-------------------------------------------------------------------------------
 
 LISTST:
         IN      PRTSTA
@@ -195,16 +305,46 @@ LISTST:
         MVI     A, 0FFH
         RET
 
+;-------------------------------------------------------------------------------
 ; PUNCH - Send character to punch device
-;   Input: C = character
+;-------------------------------------------------------------------------------
+; Description:
+;   Outputs a character to the punch (auxiliary output) device.
+;
+; Input:
+;   C       - [REQ] ASCII character to output
+;
+; Output:
+;   (none)
+;
+; Clobbers:
+;   A
+;-------------------------------------------------------------------------------
 
 PUNCH:
         MOV     A, C
         OUT     AUXDAT
         RET
 
+;-------------------------------------------------------------------------------
 ; READER - Read character from reader device
-;   Returns: A = character (or 1AH/EOF if not implemented)
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a character from the reader (auxiliary input) device.
+;   Strips high bit (parity).
+;
+; Input:
+;   (none)  - [---]
+;
+; Output:
+;   A       - ASCII character (00H-7FH)
+;
+; Clobbers:
+;   Flags
+;
+; Notes:
+;   - Returns 1AH (EOF) if device not available
+;-------------------------------------------------------------------------------
 
 READER:
         IN      AUXDAT
@@ -215,30 +355,87 @@ READER:
 ; Disk I/O Functions
 ;-------------------------------------------------------------------------------
 
-; HOME - Move to track 0
+;-------------------------------------------------------------------------------
+; HOME - Move disk head to track 0
+;-------------------------------------------------------------------------------
+; Description:
+;   Positions the disk head to track 0 of the currently selected drive.
+;   Equivalent to SETTRK with BC=0. Falls through to SETTRK.
+;
+; Input:
+;   (none)  - [---]
+;
+; Output:
+;   SEKTRK  - Set to 0
+;
+; Clobbers:
+;   A, BC
+;-------------------------------------------------------------------------------
 
 HOME:
         LXI     B, 0            ; Track 0
         ; Fall through to SETTRK
 
-; SETTRK - Set track number
-;   Input: BC = track number
+;-------------------------------------------------------------------------------
+; SETTRK - Set track number for next disk operation
+;-------------------------------------------------------------------------------
+; Description:
+;   Stores the track number for subsequent READ or WRITE operations.
+;   Track is used from low byte (C) only.
+;
+; Input:
+;   BC      - [REQ] Track number (0 to NTRKS-1, C register used)
+;
+; Output:
+;   SEKTRK  - Updated with track number
+;
+; Clobbers:
+;   A
+;-------------------------------------------------------------------------------
 
 SETTRK:
         MOV     A, C
         STA     SEKTRK          ; Save track
         RET
 
-; SETSEC - Set sector number
-;   Input: BC = sector number
+;-------------------------------------------------------------------------------
+; SETSEC - Set sector number for next disk operation
+;-------------------------------------------------------------------------------
+; Description:
+;   Stores the physical sector number for subsequent READ or WRITE
+;   operations. Sector is used from low byte (C) only.
+;
+; Input:
+;   BC      - [REQ] Sector number (1 to NSECTS, C register used)
+;
+; Output:
+;   SEKSEC  - Updated with sector number
+;
+; Clobbers:
+;   A
+;-------------------------------------------------------------------------------
 
 SETSEC:
         MOV     A, C
         STA     SEKSEC          ; Save sector
         RET
 
-; SETDMA - Set DMA address
-;   Input: BC = DMA address
+;-------------------------------------------------------------------------------
+; SETDMA - Set DMA address for disk operations
+;-------------------------------------------------------------------------------
+; Description:
+;   Sets the memory address for subsequent disk READ or WRITE operations.
+;   The 128-byte sector will be read to or written from this address.
+;
+; Input:
+;   BC      - [REQ] DMA buffer address
+;
+; Output:
+;   DMAADR  - Updated with buffer address
+;
+; Clobbers:
+;   HL
+;-------------------------------------------------------------------------------
 
 SETDMA:
         MOV     L, C
@@ -246,10 +443,29 @@ SETDMA:
         SHLD    DMAADR          ; Save DMA address
         RET
 
+;-------------------------------------------------------------------------------
 ; SELDSK - Select disk drive
-;   Input: C = disk number (0=A, 1=B, etc.)
-;          E = 0 if first select (cold), 1 if logged in
-;   Returns: HL = address of DPH, or 0000H if invalid
+;-------------------------------------------------------------------------------
+; Description:
+;   Selects a disk drive and returns the address of its Disk Parameter
+;   Header (DPH). The DPH contains pointers to the translation table,
+;   directory buffer, DPB, checksum vector, and allocation vector.
+;
+; Input:
+;   C       - [REQ] Disk number (0=A, 1=B, 2=C, 3=D)
+;   E       - [OPT] 0=first select (cold), non-0=already logged in
+;
+; Output:
+;   HL      - DPH address if valid (0-3), 0000H if invalid drive
+;   SEKDSK  - Updated with selected disk number
+;
+; Clobbers:
+;   A, DE, flags
+;
+; Notes:
+;   - Supports NDISKS (4) drives: A: through D:
+;   - DPH is 16 bytes per drive
+;-------------------------------------------------------------------------------
 
 SELDSK:
         MOV     A, C
@@ -273,10 +489,28 @@ SELNO:
         LXI     H, 0            ; Return 0 for invalid
         RET
 
+;-------------------------------------------------------------------------------
 ; SECTRAN - Translate logical to physical sector
-;   Input: BC = logical sector
-;          DE = translation table address (or 0)
-;   Returns: HL = physical sector
+;-------------------------------------------------------------------------------
+; Description:
+;   Converts a logical sector number to a physical sector number using
+;   the disk's sector translation table (skew table). If no translation
+;   table is provided (DE=0), returns the logical sector unchanged.
+;
+; Input:
+;   BC      - [REQ] Logical sector number (0 to NSECTS-1)
+;   DE      - [OPT] Translation table address, or 0000H for no translation
+;
+; Output:
+;   HL      - Physical sector number
+;
+; Clobbers:
+;   A, DE, flags
+;
+; Notes:
+;   - Translation table is indexed by logical sector
+;   - 8" SSSD uses 6-sector skew for optimal rotational latency
+;-------------------------------------------------------------------------------
 
 SECTRAN:
         MOV     A, D            ; Check if table exists
@@ -294,8 +528,23 @@ NOTRAN:
         MOV     L, C
         RET
 
-; READ - Read one sector
-;   Returns: A = 0 if success, 1 if error
+;-------------------------------------------------------------------------------
+; READ - Read one 128-byte sector from disk
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a sector from the currently selected disk at the track and
+;   sector set by SETTRK and SETSEC, into the buffer at the DMA address.
+;
+; Input:
+;   (implicit) - SEKDSK, SEKTRK, SEKSEC, DMAADR must be set
+;
+; Output:
+;   A       - 0 on success, non-0 on error
+;   (DMAADR)- 128 bytes of sector data on success
+;
+; Clobbers:
+;   HL, flags
+;-------------------------------------------------------------------------------
 
 READ:
         CALL    SETFDC          ; Set up FDC parameters
@@ -304,9 +553,26 @@ READ:
         IN      FDCST           ; Get status
         RET
 
-; WRITE - Write one sector
-;   Input: C = write type (0=normal, 1=directory, 2=first block)
-;   Returns: A = 0 if success, 1 if error
+;-------------------------------------------------------------------------------
+; WRITE - Write one 128-byte sector to disk
+;-------------------------------------------------------------------------------
+; Description:
+;   Writes a sector to the currently selected disk at the track and
+;   sector set by SETTRK and SETSEC, from the buffer at the DMA address.
+;
+; Input:
+;   C       - [OPT] Write type: 0=normal, 1=directory, 2=first block of file
+;   (implicit) - SEKDSK, SEKTRK, SEKSEC, DMAADR must be set
+;
+; Output:
+;   A       - 0 on success, non-0 on error
+;
+; Clobbers:
+;   HL
+;
+; Notes:
+;   - Write type used by BDOS for write optimization (not used here)
+;-------------------------------------------------------------------------------
 
 WRITE:
         CALL    SETFDC          ; Set up FDC parameters
@@ -315,7 +581,22 @@ WRITE:
         IN      FDCST           ; Get status
         RET
 
-; SETFDC - Set up FDC with current parameters
+;-------------------------------------------------------------------------------
+; SETFDC - Configure FDC for disk operation (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Programs the z80pack FDC with disk, track, sector, and DMA address
+;   from the saved state variables. Called by READ and WRITE.
+;
+; Input:
+;   (implicit) - SEKDSK, SEKTRK, SEKSEC, DMAADR
+;
+; Output:
+;   (FDC ports) - FDCD, FDCT, FDCS, DMAL, DMAH programmed
+;
+; Clobbers:
+;   A, HL
+;-------------------------------------------------------------------------------
 
 SETFDC:
         LDA     SEKDSK          ; Drive

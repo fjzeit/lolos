@@ -6,6 +6,53 @@
 - Comment non-obvious logic
 - One logical unit per source file
 
+## Function Documentation Format
+
+### Verbose Block (public functions and complex internals)
+```asm
+;-------------------------------------------------------------------------------
+; FUNCNAME - Brief one-line description
+;-------------------------------------------------------------------------------
+; Description:
+;   Multi-line description of purpose and behavior.
+;
+; Input:
+;   A       - [REQ] Required input description
+;   DE      - [OPT] Optional input (default: value)
+;   HL      - [---] Not used
+;
+; Output:
+;   A       - Return value description
+;   Z flag  - Set if condition, clear otherwise
+;
+; Clobbers:
+;   BC, DE, flags
+;
+; Notes:
+;   - Edge cases, dependencies, etc.
+;-------------------------------------------------------------------------------
+```
+
+### Compact Block (small internal helpers)
+```asm
+; HELPER - Brief description
+; Input: REG=desc  Output: REG=desc  Clobbers: REG, flags
+```
+
+### Clobbers Documentation Rules
+- **Always document flags** - Most 8080 instructions modify flags; explicitly list them
+- **Outputs are not clobbers** - If A is a return value, don't list it as clobbered
+- **Be specific** - List specific registers (BC, DE, HL, flags) rather than "All registers"
+- **"(none)" means nothing** - Only use when truly no registers/flags are modified
+- BDOS public functions with output in HL: "Clobbers: BC, DE, flags"
+- BDOS public functions without output: "Clobbers: BC, DE, HL, flags"
+
+### Register Notation
+- `[REQ]` - Required input, must be set by caller
+- `[OPT]` - Optional input, has default or conditional use
+- `[---]` - Not used / ignored
+- `[COND]` - Conditional, depends on another parameter
+
 ## Toolchain
 - **Assembler**: zmac with `-8` flag for 8080-only mode
 - **Emulator**: z80pack (cpmsim)

@@ -61,7 +61,20 @@ B_USER   EQU    32
 
         ORG     CCP
 
-; Entry from warm boot (C = current drive)
+;-------------------------------------------------------------------------------
+; CCPENT - CCP warm boot entry point
+;-------------------------------------------------------------------------------
+; Description:
+;   Main entry point for CCP from warm boot. Initializes current disk,
+;   resets the disk system, then enters the command loop.
+;
+; Input:
+;   C       - [REQ] Current disk number (0=A, 1=B, etc.)
+;
+; Output:
+;   (none)  - Enters command loop, does not return
+;-------------------------------------------------------------------------------
+
 CCPENT:
         MOV     A, C
         ANI     0FH             ; Mask drive number
@@ -71,7 +84,20 @@ CCPENT:
         MVI     C, B_RESET
         CALL    ENTRY
 
-; Re-entry point after transient command
+;-------------------------------------------------------------------------------
+; CCPRET - Re-entry point after transient program
+;-------------------------------------------------------------------------------
+; Description:
+;   Entry point when a transient program returns. Resets the stack
+;   and synchronizes with the current disk before resuming command loop.
+;
+; Input:
+;   (none)
+;
+; Output:
+;   (none)  - Enters command loop
+;-------------------------------------------------------------------------------
+
 CCPRET:
         LXI     SP, CCPSTK      ; Set up local stack
         ; Sync with system drive (programs may have changed it via BDOS)
@@ -79,7 +105,8 @@ CCPRET:
         ANI     0FH
         STA     CURDSK
 
-; Main command loop
+; CCPLP - Main command loop
+; Prompts, reads command, parses, and executes
 CCPLP:
         CALL    CRLF            ; New line before prompt
         CALL    GETDSK          ; Ensure disk is selected
@@ -91,7 +118,20 @@ CCPLP:
         JMP     CCPLP
 
 ;-------------------------------------------------------------------------------
-; Display prompt (e.g., "A>")
+; PROMPT - Display command prompt
+;-------------------------------------------------------------------------------
+; Description:
+;   Displays the CP/M prompt consisting of the current drive letter
+;   followed by '>'. Example: "A>"
+;
+; Input:
+;   CURDSK  - [REQ] Current disk number
+;
+; Output:
+;   (console) - Prompt displayed
+;
+; Clobbers:
+;   A, C, flags
 ;-------------------------------------------------------------------------------
 
 PROMPT:
@@ -104,7 +144,21 @@ PROMPT:
         RET
 
 ;-------------------------------------------------------------------------------
-; Read command line into buffer
+; RDCMD - Read command line from console
+;-------------------------------------------------------------------------------
+; Description:
+;   Reads a command line using BDOS function 10. Converts input to
+;   uppercase and copies to DBUFF for processing.
+;
+; Input:
+;   (none)
+;
+; Output:
+;   Z flag  - Set if empty line, clear if command entered
+;   DBUFF   - Command line (byte 0 = length, bytes 1+ = text)
+;
+; Clobbers:
+;   A, BC, DE, HL, flags
 ;-------------------------------------------------------------------------------
 
 RDCMD:
@@ -145,8 +199,23 @@ RDCMPL:
         RET
 
 ;-------------------------------------------------------------------------------
-; Parse command into FCB
-; Returns Z if empty
+; PARSE - Parse command line into FCBs
+;-------------------------------------------------------------------------------
+; Description:
+;   Parses the command line from DBUFF into DFCB (first filename/command)
+;   and DFCB2 (second filename if present). Clears FCBs first.
+;
+; Input:
+;   DBUFF   - [REQ] Command line
+;
+; Output:
+;   Z flag  - Set if empty line, clear if valid command
+;   DFCB    - First filename parsed
+;   DFCB2   - Second filename (if present)
+;   CMDTAIL - Points to arguments after command name
+;
+; Clobbers:
+;   A, BC, DE, HL, flags
 ;-------------------------------------------------------------------------------
 
 PARSE:
@@ -206,8 +275,26 @@ PARSDN:
         ORA     A
         RET
 
-; Parse one filename from (HL) into FCB at (DE)
-; Advances HL past the filename
+;-------------------------------------------------------------------------------
+; PARFCB - Parse filename into FCB
+;-------------------------------------------------------------------------------
+; Description:
+;   Parses a filename (with optional drive prefix) from the command line
+;   into an FCB. Handles drive letter (X:), wildcards (* and ?), and
+;   extension. Advances HL past the parsed name.
+;
+; Input:
+;   HL      - [REQ] Pointer to filename string
+;   DE      - [REQ] Pointer to destination FCB
+;
+; Output:
+;   HL      - Advanced past the filename
+;   FCB     - Filled with drive, filename, and extension
+;
+; Clobbers:
+;   A, BC, DE, flags
+;-------------------------------------------------------------------------------
+
 PARFCB:
         PUSH    D               ; Save FCB pointer
         ; Check for drive specifier
@@ -389,7 +476,22 @@ PFDONE:
         RET
 
 ;-------------------------------------------------------------------------------
-; Execute command
+; EXEC - Execute command
+;-------------------------------------------------------------------------------
+; Description:
+;   Dispatches command execution. Checks for drive change (e.g., "B:"),
+;   built-in commands (DIR, ERA, REN, TYPE, SAVE, USER), or loads and
+;   executes a transient .COM program.
+;
+; Input:
+;   DFCB    - [REQ] Parsed command name
+;   DBUFF   - [REQ] Full command line
+;
+; Output:
+;   (varies) - Command executed
+;
+; Clobbers:
+;   BC, DE, HL, flags
 ;-------------------------------------------------------------------------------
 
 EXEC:
@@ -480,7 +582,24 @@ EXSK2:
         INX     D               ; Skip address high
         JMP     EXLOOP
 
-; Execute transient command
+;-------------------------------------------------------------------------------
+; EXTRAN - Load and execute transient program
+;-------------------------------------------------------------------------------
+; Description:
+;   Loads a .COM file from disk into the TPA (0100H) and executes it.
+;   Sets up FCBs and command tail before transferring control.
+;
+; Input:
+;   DFCB    - [REQ] Program name (extension set to .COM)
+;
+; Output:
+;   (program) - Transient program executed
+;
+; Notes:
+;   - Program must fit below CCP
+;   - Returns to CCPRET when program terminates
+;-------------------------------------------------------------------------------
+
 EXTRAN:
         ; Add .COM extension to FCB
         LXI     H, DFCB+9
@@ -658,7 +777,18 @@ CMDTBL:
         DB      0               ; End of table
 
 ;-------------------------------------------------------------------------------
-; DIR - Directory listing
+; CMDDIR - DIR built-in command
+;-------------------------------------------------------------------------------
+; Description:
+;   Lists directory entries matching the pattern. If no argument given,
+;   lists all files (*.*). Displays filenames in 4 columns, skipping
+;   system files.
+;
+; Input:
+;   DBUFF   - [REQ] Command line (may contain filename pattern)
+;
+; Output:
+;   (console) - Directory listing displayed
 ;-------------------------------------------------------------------------------
 
 CMDDIR:
@@ -777,7 +907,8 @@ DIRNON:
         CALL    PRTSTR
         RET
 
-; Print B characters from (HL), masking high bit
+; PRNAME - Print filename characters
+; Input: B=count, HL=source  Output: HL advanced  Clobbers: A, B, C, flags
 PRNAME:
         MOV     A, M
         ANI     7FH             ; Mask attribute bit
@@ -789,7 +920,17 @@ PRNAME:
         RET
 
 ;-------------------------------------------------------------------------------
-; ERA - Erase files
+; CMDERA - ERA built-in command
+;-------------------------------------------------------------------------------
+; Description:
+;   Erases files matching the pattern. Prompts for confirmation if
+;   wildcards are used.
+;
+; Input:
+;   DBUFF   - [REQ] Command line with filename pattern
+;
+; Output:
+;   (disk)  - Files deleted
 ;-------------------------------------------------------------------------------
 
 CMDERA:
@@ -847,8 +988,8 @@ ERAERR:
         LXI     D, MSGERR
         JMP     PRTSTR
 
-; Check if FCB has wildcards
-; Returns NZ if wildcards present, Z if no wildcards
+; HASWILD - Check if FCB contains wildcards
+; Input: (DFCB)  Output: Z=no wildcards, NZ=has wildcards  Clobbers: A, B, HL, flags
 HASWILD:
         LXI     H, DFCB+1
         MVI     B, 11
@@ -867,7 +1008,18 @@ HWFND:
         RET
 
 ;-------------------------------------------------------------------------------
-; REN - Rename file
+; CMDREN - REN built-in command
+;-------------------------------------------------------------------------------
+; Description:
+;   Renames a file. Expects two filenames: new=old format.
+;   DFCB contains new name, DFCB2 contains old name.
+;
+; Input:
+;   DFCB    - [REQ] New filename
+;   DFCB2   - [REQ] Old filename
+;
+; Output:
+;   (disk)  - File renamed
 ;-------------------------------------------------------------------------------
 
 CMDREN:
@@ -922,7 +1074,17 @@ RENNF:
         JMP     PRTSTR
 
 ;-------------------------------------------------------------------------------
-; TYPE - Display file contents
+; CMDTYP - TYPE built-in command
+;-------------------------------------------------------------------------------
+; Description:
+;   Displays the contents of a text file to the console. Stops at ^Z
+;   (EOF marker) or end of file. Can be aborted with ^C.
+;
+; Input:
+;   DBUFF   - [REQ] Command line with filename
+;
+; Output:
+;   (console) - File contents displayed
 ;-------------------------------------------------------------------------------
 
 CMDTYP:
@@ -1013,8 +1175,17 @@ TYPNF:
         JMP     PRTSTR
 
 ;-------------------------------------------------------------------------------
-; SAVE - Save memory to file
-; Usage: SAVE nn filename (save nn pages from 100H)
+; CMDSAV - SAVE built-in command
+;-------------------------------------------------------------------------------
+; Description:
+;   Saves memory from TPA (0100H) to a file. Usage: SAVE nn filename
+;   where nn is the number of 256-byte pages to save.
+;
+; Input:
+;   DBUFF   - [REQ] Command line: "SAVE nn filename"
+;
+; Output:
+;   (disk)  - File created with memory contents
 ;-------------------------------------------------------------------------------
 
 CMDSAV:
@@ -1109,8 +1280,8 @@ SAVERW:
         LXI     D, MSGWER
         JMP     PRTSTR
 
-; Get decimal number from (HL)
-; Returns value in A, advances HL
+; GETNUM - Parse decimal number from string
+; Input: HL=string  Output: A=value, HL advanced  Clobbers: BC, flags
 GETNUM:
         MVI     B, 0            ; Accumulator
 GNLOOP:
@@ -1134,7 +1305,8 @@ GNDONE:
         MOV     A, B
         RET
 
-; Skip spaces at (HL)
+; SKIPSPC - Skip whitespace characters
+; Input: HL=string  Output: HL=first non-space  Clobbers: A, flags
 SKIPSPC:
         MOV     A, M
         CPI     ' '
@@ -1143,7 +1315,17 @@ SKIPSPC:
         JMP     SKIPSPC
 
 ;-------------------------------------------------------------------------------
-; USER - Set user number
+; CMDUSR - USER built-in command
+;-------------------------------------------------------------------------------
+; Description:
+;   Sets the current user number (0-15). User numbers provide separate
+;   file namespaces on the same disk.
+;
+; Input:
+;   DBUFF   - [REQ] Command line: "USER n"
+;
+; Output:
+;   (BDOS)  - User number changed
 ;-------------------------------------------------------------------------------
 
 CMDUSR:
@@ -1171,7 +1353,8 @@ USRERR:
 ; Utility Routines
 ;-------------------------------------------------------------------------------
 
-; BDOS call
+; BDOSCL - BDOS call with register preservation
+; Input: C=function, DE=param  Output: A=result  Clobbers: flags (preserves HL, BC)
 BDOSCL:
         PUSH    H               ; Preserve HL (BDOS corrupts it)
         PUSH    B               ; Preserve BC
@@ -1180,7 +1363,8 @@ BDOSCL:
         POP     H
         RET
 
-; Get/select current disk
+; GETDSK - Select current disk via BDOS
+; Input: CURDSK  Output: (disk selected)  Clobbers: A, C, E, flags
 GETDSK:
         LDA     CURDSK
         MOV     E, A
@@ -1188,7 +1372,8 @@ GETDSK:
         CALL    BDOSCL
         RET
 
-; Output character in C
+; OUTCHR - Output character to console
+; Input: C=character  Output: (none)  Clobbers: A, flags (preserves HL, BC)
 OUTCHR:
         PUSH    H               ; Preserve HL (BDOS corrupts it)
         PUSH    B               ; Preserve BC
@@ -1199,13 +1384,15 @@ OUTCHR:
         POP     H
         RET
 
-; Print string ($ terminated)
+; PRTSTR - Print '$'-terminated string
+; Input: DE=string address  Output: (console)  Clobbers: A, C, flags
 PRTSTR:
         MVI     C, B_PRINT
         CALL    ENTRY
         RET
 
-; Print CR/LF
+; CRLF - Print carriage return and line feed
+; Input: (none)  Output: (console)  Clobbers: A, C, flags
 CRLF:
         MVI     C, CR
         CALL    OUTCHR
@@ -1213,7 +1400,8 @@ CRLF:
         CALL    OUTCHR
         RET
 
-; Convert to uppercase
+; TOUPPER - Convert character to uppercase
+; Input: A=character  Output: A=uppercase  Clobbers: flags
 TOUPPER:
         CPI     'a'
         RC
@@ -1222,7 +1410,8 @@ TOUPPER:
         SUI     20H
         RET
 
-; Copy B bytes from HL to DE
+; COPY - Copy B bytes from HL to DE
+; Input: B=count, HL=source, DE=dest  Output: HL,DE advanced  Clobbers: A, B, flags
 COPY:
         MOV     A, M
         STAX    D
