@@ -151,6 +151,7 @@ class CpmTester:
             "tattrib",
             "tiobyte",
             "tconch",
+            "tconstr",
         ]
 
         for prog in test_programs:
@@ -216,6 +217,7 @@ class CpmTester:
             "tattrib.com",
             "tiobyte.com",
             "tconch.com",
+            "tconstr.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -653,6 +655,23 @@ def test_conch(tester: CpmTester):
     return False, "Console I/O tests failed", output
 
 
+def test_constr(tester: CpmTester):
+    """Test console string I/O (F9, F10, F11) with input injection"""
+    # F10 tests:
+    # - T5 expects "HELLO" + CR (reads 5 chars)
+    # - T6 expects just CR (reads 0 chars, empty line)
+    success, output = tester.run_cpmsim(["TCONSTR"], timeout=10,
+                                         program_input="HELLO\r\r")
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Console string I/O tests passed", output
+
+    return False, "Console string I/O tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -703,6 +722,7 @@ def main():
         ("attrib", lambda: test_attrib(tester)),
         ("iobyte", lambda: test_iobyte(tester)),
         ("conch", lambda: test_conch(tester)),
+        ("constr", lambda: test_constr(tester)),
     ]
 
     # Filter tests if specific test requested

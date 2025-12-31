@@ -4,10 +4,19 @@
 
 Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm boot and F38-39/unused). Functions grouped by logical relationship.
 
+### Implementation Progress
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | Console Character I/O (F1, F2) | ✅ Complete |
+| 2 | Console String I/O (F9, F10, F11) | ✅ Complete |
+| 3 | Direct Console I/O (F6) | Pending |
+| 4 | Auxiliary & List (F3, F4, F5) | Pending |
+| 5-18 | Remaining phases | Pending |
+
 ### Current Coverage Summary
-- **Console I/O (F1-F11):** 3/11 tested (F7, F8, implicit F2/F9)
+- **Console I/O (F1-F11):** 8/11 tested (F1, F2, F7, F8, F9, F10, F11 + implicit)
 - **Disk/File (F12-F40):** 23/27 tested
-- **Missing dedicated tests:** F1, F2, F3, F4, F5, F6, F9, F10, F11, F15, F16, F19, F20, F21, F22, F23, F26
+- **Missing dedicated tests:** F3, F4, F5, F6, F15, F16, F19, F20, F21, F22, F23, F26
 
 ### Test Program Pattern
 All tests follow the standard structure in `tests/programs/`:
@@ -18,7 +27,7 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 1: Console Character I/O (F1, F2)
-**New file:** `tests/programs/tconch.asm`
+**File:** `tests/programs/tconch.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
@@ -26,22 +35,21 @@ All tests follow the standard structure in `tests/programs/`:
 | F1 | C_READ | Console input with echo |
 | F2 | C_WRITE | Console output |
 
-### Test Cases
-1. **T1:** F2 output printable character (verify echo)
-2. **T2:** F2 output control character (no echo expected)
-3. **T3:** F2 output CR, LF, TAB (verify echo)
-4. **T4:** F1 input with echo (requires input injection via test harness)
-5. **T5:** F1 control character handling (^S pause, ^P printer toggle)
+### Implemented Tests
+1. **T1:** F2 output printable character ✅
+2. **T2:** F2 output CR/LF sequence ✅
+3. **T3:** F2 output TAB ✅
+4. **T4:** F1 input with echo (reads 'A') ✅
+5. **T5:** F1 input with echo (reads 'B') ✅
 
 ### Implementation Notes
-- F2 is implicitly tested everywhere but needs explicit boundary testing
-- F1 requires test harness modification to inject input characters
-- Test harness change: pipe specific characters to cpmsim stdin
+- Input injection via `program_input` parameter in test harness
+- F1 ^S/^P control character handling deferred (hard to verify automatically)
 
 ---
 
 ## Phase 2: Console String I/O (F9, F10, F11)
-**New file:** `tests/programs/tconstr.asm`
+**File:** `tests/programs/tconstr.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
@@ -50,18 +58,17 @@ All tests follow the standard structure in `tests/programs/`:
 | F10 | C_READSTR | Buffered line input with editing |
 | F11 | C_STAT | Console status (char ready?) |
 
-### Test Cases
-1. **T1:** F9 print simple string
-2. **T2:** F9 print empty string (just $)
-3. **T3:** F9 string with embedded CR/LF
-4. **T4:** F11 status when no input pending (expect 0)
-5. **T5:** F10 basic line input (requires harness input injection)
-6. **T6:** F10 buffer overflow (exceed max length, expect bell)
-7. **T7:** F10 line editing (^H backspace, ^U delete line)
+### Implemented Tests
+1. **T1:** F9 print simple string ✅
+2. **T2:** F9 print empty string ✅
+3. **T3:** F9 string with embedded CR/LF ✅
+4. **T4:** F10 basic line input (with input injection) ✅
+5. **T5:** F10 empty line input ✅
+6. **T6:** F11 console status ✅
 
 ### Implementation Notes
-- F10 line editing tests require careful harness coordination
-- F11 is straightforward - just verify return values
+- **Critical:** F11 must be called AFTER F10 reads input. F11's ^S check consumes a character from stdin, which would break subsequent F10 reads.
+- F10 buffer overflow and line editing tests deferred (require more complex harness coordination)
 
 ---
 

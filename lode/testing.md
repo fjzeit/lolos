@@ -49,7 +49,7 @@ flowchart TD
 4. **Execute**: Pipes commands to cpmsim via stdin
 5. **Verify**: Checks output for expected patterns
 
-### Current Tests (17 total)
+### Current Tests (18 total)
 
 | Test | Program | Description | BDOS Functions Tested |
 |------|---------|-------------|----------------------|
@@ -70,8 +70,9 @@ flowchart TD
 | attrib | tattrib.asm | File attributes | F30 |
 | iobyte | tiobyte.asm | IOBYTE and write protect | F7, F8, F28 |
 | conch | tconch.asm | Console character I/O | F1, F2 |
+| constr | tconstr.asm | Console string I/O | F9, F10, F11 |
 
-**Status**: 17/17 tests pass
+**Status**: 18/18 tests pass
 
 ### Test Programs (tests/programs/*.asm)
 
@@ -89,6 +90,7 @@ flowchart TD
 | tattrib.asm | File attributes (read-only, system, archive) |
 | tiobyte.asm | IOBYTE and write protect operations |
 | tconch.asm | Console character I/O - F1 input with echo, F2 output |
+| tconstr.asm | Console string I/O - F9 print, F10 buffered input, F11 status |
 
 All test programs follow the same pattern:
 1. Print test header
