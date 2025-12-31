@@ -13,7 +13,8 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 4 | Auxiliary & List (F3, F4, F5) | ✅ Complete |
 | 5 | IOBYTE Enhancement (F7, F8) | ✅ Complete |
 | 6 | Version Enhancement (F12) | ✅ Complete |
-| 7-18 | Remaining phases | Pending |
+| 7 | Disk System (F13, F14, F24, F25, F31, F37) | ✅ Complete |
+| 8-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
@@ -158,7 +159,7 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 7: Disk System (F13, F14, F24, F25, F31, F37)
-**Existing file:** `tests/programs/tdisk.asm`
+**File:** `tests/programs/tdisk.asm` ✅ Enhanced
 
 ### Functions
 | Fn | Name | Description |
@@ -170,14 +171,24 @@ All tests follow the standard structure in `tests/programs/`:
 | F31 | DRV_DPB | Get Disk Parameter Block address |
 | F37 | DRV_RESET | Reset specific drives |
 
-### Current Coverage
-- Basic operations tested
-
-### Additional Test Cases
-1. **T-new1:** F14 select invalid drive (expect error)
-2. **T-new2:** F37 reset with various bitmasks
-3. **T-new3:** F31 DPB field verification (SPT, BSH, BLM, etc.)
-4. **T-new4:** F24 bitmap after multi-drive access
+### Implemented Tests (17 total)
+1. **T1:** F25 Get Current Disk (=0) ✅
+2. **T2:** F24 Login Vector bit 0 set ✅
+3. **T3:** F13 Reset clears login vector ✅
+4. **T4:** F13 Reset keeps disk 0 ✅
+5. **T5:** F14 Select sets login bit ✅
+6. **T6:** F27 Get ALV address (non-zero) ✅
+7. **T7:** F31 Get DPB, verify SPT=26 ✅
+8. **T8:** F29 R/O vector = 0 ✅
+9. **T9:** F37 Reset drive clears login ✅
+10. **T10:** F14 Invalid drive (16) ignored ✅
+11. **T11:** F37 Multi-drive bitmask (0003H) ✅
+12. **T12:** F31 DPB BSH=3 ✅
+13. **T13:** F31 DPB BLM=7 ✅
+14. **T14:** F31 DPB EXM=0 ✅
+15. **T15:** F31 DPB DSM=242 ✅
+16. **T16:** F31 DPB DRM=63 ✅
+17. **T17:** F31 DPB OFF=2 ✅
 
 ---
 

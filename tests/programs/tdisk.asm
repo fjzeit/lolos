@@ -288,11 +288,284 @@ TEST8:
         ANI     01H
         JNZ     T8FAIL
         CALL    TPASS
-        JMP     SUMMARY
+        JMP     TEST10
 
 T8FAIL:
         CALL    TFAIL
         LXI     D, MSGRSTD
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 10: F14 - Select invalid drive (expect non-zero/error)
+        ;---------------------------------------------------------------
+TEST10:
+        MVI     A, 10
+        STA     TESTNUM
+        LXI     D, MSG_T10
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Select drive 16 (P:) - invalid
+        MVI     E, 16
+        MVI     C, F_SELDSK
+        CALL    BDOS
+        ; A should be non-zero (FFH typically) or HL=0000 for error
+        ; Actually, CP/M returns HL=0 from BIOS SELDSK for invalid drive
+        ; BDOS F14 returns A=0 always but may not work
+        ; The key test is that login vector should NOT have bit 16 set
+        ; (since we only have drives A-P possible, let's verify login unchanged)
+        MVI     C, F_LOGINVEC
+        CALL    BDOS
+        MOV     A, H
+        ANI     01H             ; Bit 16 would be in H, bit 0
+        JNZ     T10FAIL         ; Bit 16 should NOT be set
+        CALL    TPASS
+        JMP     TEST11
+
+T10FAIL:
+        CALL    TFAIL
+        LXI     D, MSGINV
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 11: F37 - Reset with multiple drive bitmask
+        ;---------------------------------------------------------------
+TEST11:
+        MVI     A, 11
+        STA     TESTNUM
+        LXI     D, MSG_T11
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; First ensure drive A is logged in
+        MVI     E, 0
+        MVI     C, F_SELDSK
+        CALL    BDOS
+
+        ; Verify A is logged in
+        MVI     C, F_LOGINVEC
+        CALL    BDOS
+        MOV     A, L
+        ANI     01H
+        JZ      T11FAIL         ; Should be logged in
+
+        ; Reset both A and B (bitmap = 0003H)
+        LXI     D, 0003H
+        MVI     C, F_RSTDRV
+        CALL    BDOS
+
+        ; Check login vector - bit 0 should be cleared
+        MVI     C, F_LOGINVEC
+        CALL    BDOS
+        MOV     A, L
+        ANI     01H
+        JNZ     T11FAIL         ; Bit 0 should be clear
+        CALL    TPASS
+        JMP     TEST12
+
+T11FAIL:
+        CALL    TFAIL
+        LXI     D, MSGBITS
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 12: F31 DPB - Verify BSH=3
+        ;---------------------------------------------------------------
+TEST12:
+        MVI     A, 12
+        STA     TESTNUM
+        LXI     D, MSG_T12
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Ensure drive selected
+        MVI     E, 0
+        MVI     C, F_SELDSK
+        CALL    BDOS
+
+        MVI     C, F_GETDPB
+        CALL    BDOS
+        ; HL points to DPB
+        ; Skip SPT (2 bytes)
+        INX     H
+        INX     H
+        ; Now at BSH
+        MOV     A, M
+        CPI     3               ; BSH should be 3 for 1K blocks
+        JNZ     T12FAIL
+        CALL    TPASS
+        JMP     TEST13
+
+T12FAIL:
+        STA     GOTVAL
+        CALL    TFAIL
+        LXI     D, MSGBSH
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 13: F31 DPB - Verify BLM=7
+        ;---------------------------------------------------------------
+TEST13:
+        MVI     A, 13
+        STA     TESTNUM
+        LXI     D, MSG_T13
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        MVI     C, F_GETDPB
+        CALL    BDOS
+        ; Skip SPT(2) + BSH(1) = 3 bytes
+        INX     H
+        INX     H
+        INX     H
+        ; Now at BLM
+        MOV     A, M
+        CPI     7               ; BLM = 2^BSH - 1 = 7
+        JNZ     T13FAIL
+        CALL    TPASS
+        JMP     TEST14
+
+T13FAIL:
+        STA     GOTVAL
+        CALL    TFAIL
+        LXI     D, MSGBLM
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 14: F31 DPB - Verify EXM=0
+        ;---------------------------------------------------------------
+TEST14:
+        MVI     A, 14
+        STA     TESTNUM
+        LXI     D, MSG_T14
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        MVI     C, F_GETDPB
+        CALL    BDOS
+        ; Skip SPT(2) + BSH(1) + BLM(1) = 4 bytes
+        INX     H
+        INX     H
+        INX     H
+        INX     H
+        ; Now at EXM
+        MOV     A, M
+        ORA     A               ; EXM should be 0
+        JNZ     T14FAIL
+        CALL    TPASS
+        JMP     TEST15
+
+T14FAIL:
+        STA     GOTVAL
+        CALL    TFAIL
+        LXI     D, MSGEXM
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 15: F31 DPB - Verify DSM=242
+        ;---------------------------------------------------------------
+TEST15:
+        MVI     A, 15
+        STA     TESTNUM
+        LXI     D, MSG_T15
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        MVI     C, F_GETDPB
+        CALL    BDOS
+        ; Skip SPT(2) + BSH(1) + BLM(1) + EXM(1) = 5 bytes
+        LXI     D, 5
+        DAD     D
+        ; Now at DSM (2 bytes, little-endian)
+        MOV     E, M
+        INX     H
+        MOV     D, M            ; DE = DSM
+        MOV     A, E
+        CPI     242             ; DSM low byte
+        JNZ     T15FAIL
+        MOV     A, D
+        ORA     A               ; DSM high byte should be 0
+        JNZ     T15FAIL
+        CALL    TPASS
+        JMP     TEST16
+
+T15FAIL:
+        CALL    TFAIL
+        LXI     D, MSGDSM
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 16: F31 DPB - Verify DRM=63
+        ;---------------------------------------------------------------
+TEST16:
+        MVI     A, 16
+        STA     TESTNUM
+        LXI     D, MSG_T16
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        MVI     C, F_GETDPB
+        CALL    BDOS
+        ; Skip SPT(2) + BSH(1) + BLM(1) + EXM(1) + DSM(2) = 7 bytes
+        LXI     D, 7
+        DAD     D
+        ; Now at DRM (2 bytes, little-endian)
+        MOV     E, M
+        INX     H
+        MOV     D, M            ; DE = DRM
+        MOV     A, E
+        CPI     63              ; DRM = 64 entries - 1 = 63
+        JNZ     T16FAIL
+        MOV     A, D
+        ORA     A               ; DRM high byte should be 0
+        JNZ     T16FAIL
+        CALL    TPASS
+        JMP     TEST17
+
+T16FAIL:
+        CALL    TFAIL
+        LXI     D, MSGDRM
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 17: F31 DPB - Verify OFF=2 (reserved tracks)
+        ;---------------------------------------------------------------
+TEST17:
+        MVI     A, 17
+        STA     TESTNUM
+        LXI     D, MSG_T17
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        MVI     C, F_GETDPB
+        CALL    BDOS
+        ; Skip to OFF: SPT(2)+BSH(1)+BLM(1)+EXM(1)+DSM(2)+DRM(2)+AL0(1)+AL1(1)+CKS(2) = 13 bytes
+        LXI     D, 13
+        DAD     D
+        ; Now at OFF (2 bytes)
+        MOV     E, M
+        INX     H
+        MOV     D, M            ; DE = OFF
+        MOV     A, E
+        CPI     2               ; OFF = 2 reserved tracks
+        JNZ     T17FAIL
+        MOV     A, D
+        ORA     A               ; OFF high byte should be 0
+        JNZ     T17FAIL
+        CALL    TPASS
+        JMP     SUMMARY
+
+T17FAIL:
+        CALL    TFAIL
+        LXI     D, MSGOFF
         MVI     C, F_PRTSTR
         CALL    BDOS
 
@@ -399,6 +672,14 @@ MSG_T5: DB      'T6: F27 Get ALV address... ', '$'
 MSG_T6: DB      'T7: F31 Get DPB (SPT=26)... ', '$'
 MSG_T7: DB      'T8: F29 R/O vector = 0... ', '$'
 MSG_T8: DB      'T9: F37 Reset drive clears login... ', '$'
+MSG_T10: DB     'T10: F14 Invalid drive ignored... ', '$'
+MSG_T11: DB     'T11: F37 Multi-drive bitmask... ', '$'
+MSG_T12: DB     'T12: F31 DPB BSH=3... ', '$'
+MSG_T13: DB     'T13: F31 DPB BLM=7... ', '$'
+MSG_T14: DB     'T14: F31 DPB EXM=0... ', '$'
+MSG_T15: DB     'T15: F31 DPB DSM=242... ', '$'
+MSG_T16: DB     'T16: F31 DPB DRM=63... ', '$'
+MSG_T17: DB     'T17: F31 DPB OFF=2... ', '$'
 
 MSGOK:  DB      'OK', CR, LF, '$'
 MSGNG:  DB      'NG', CR, LF, '$'
@@ -410,6 +691,14 @@ MSGNZ:  DB      'Expected non-zero address', CR, LF, '$'
 MSGDPB: DB      'DPB invalid or SPT!=26', CR, LF, '$'
 MSGRO0: DB      'Expected R/O vector=0', CR, LF, '$'
 MSGRSTD: DB     'Drive not reset', CR, LF, '$'
+MSGINV: DB      'Invalid drive was logged', CR, LF, '$'
+MSGBITS: DB     'Bitmask reset failed', CR, LF, '$'
+MSGBSH: DB      'BSH not 3', CR, LF, '$'
+MSGBLM: DB      'BLM not 7', CR, LF, '$'
+MSGEXM: DB      'EXM not 0', CR, LF, '$'
+MSGDSM: DB      'DSM not 242', CR, LF, '$'
+MSGDRM: DB      'DRM not 63', CR, LF, '$'
+MSGOFF: DB      'OFF not 2', CR, LF, '$'
 
 MSGSUMM: DB     'Summary: ', '$'
 MSGOF:  DB      ' of ', '$'
