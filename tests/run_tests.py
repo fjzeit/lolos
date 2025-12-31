@@ -152,6 +152,7 @@ class CpmTester:
             "tiobyte",
             "tconch",
             "tconstr",
+            "trawio",
         ]
 
         for prog in test_programs:
@@ -218,6 +219,7 @@ class CpmTester:
             "tiobyte.com",
             "tconch.com",
             "tconstr.com",
+            "trawio.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -672,6 +674,23 @@ def test_constr(tester: CpmTester):
     return False, "Console string I/O tests failed", output
 
 
+def test_rawio(tester: CpmTester):
+    """Test direct console I/O (F6) with input injection"""
+    # F6 tests:
+    # - T3 expects 'X' (blocking read)
+    # - T4 expects 'Y' (non-blocking read)
+    success, output = tester.run_cpmsim(["TRAWIO"], timeout=10,
+                                         program_input="XY")
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Direct console I/O tests passed", output
+
+    return False, "Direct console I/O tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -723,6 +742,7 @@ def main():
         ("iobyte", lambda: test_iobyte(tester)),
         ("conch", lambda: test_conch(tester)),
         ("constr", lambda: test_constr(tester)),
+        ("rawio", lambda: test_rawio(tester)),
     ]
 
     # Filter tests if specific test requested

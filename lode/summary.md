@@ -2,7 +2,7 @@
 
 A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) written in pure Intel 8080 assembly language. Fully bootable operating system targeting z80pack emulator.
 
-**Status**: Fully operational - boots, runs commands, executes .COM files, file I/O including multi-extent files (>16K). All 18 automated tests pass.
+**Status**: Fully operational - boots, runs commands, executes .COM files, file I/O including multi-extent files (>16K). All 19 automated tests pass.
 
 ## Design Decisions
 - **CPU**: Intel 8080 (no Z80 extensions, maximum compatibility)

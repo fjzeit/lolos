@@ -9,14 +9,14 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 |-------|-------------|--------|
 | 1 | Console Character I/O (F1, F2) | ✅ Complete |
 | 2 | Console String I/O (F9, F10, F11) | ✅ Complete |
-| 3 | Direct Console I/O (F6) | Pending |
+| 3 | Direct Console I/O (F6) | ✅ Complete |
 | 4 | Auxiliary & List (F3, F4, F5) | Pending |
 | 5-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
-- **Console I/O (F1-F11):** 8/11 tested (F1, F2, F7, F8, F9, F10, F11 + implicit)
+- **Console I/O (F1-F11):** 9/11 tested (F1, F2, F6, F7, F8, F9, F10, F11 + implicit)
 - **Disk/File (F12-F40):** 23/27 tested
-- **Missing dedicated tests:** F3, F4, F5, F6, F15, F16, F19, F20, F21, F22, F23, F26
+- **Missing dedicated tests:** F3, F4, F5, F15, F16, F19, F20, F21, F22, F23, F26
 
 ### Test Program Pattern
 All tests follow the standard structure in `tests/programs/`:
@@ -73,24 +73,24 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 3: Direct Console I/O (F6)
-**New file:** `tests/programs/trawio.asm`
+**File:** `tests/programs/trawio.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
 |----|------|-------------|
 | F6 | C_RAWIO | Direct console I/O (4 modes) |
 
-### Test Cases
-1. **T1:** E=char (00-FC) - output character
-2. **T2:** E=FEH - status query (no input, expect 0)
-3. **T3:** E=FFH - non-blocking input (no input, expect 0)
-4. **T4:** E=FDH - blocking input (requires input injection)
-5. **T5:** Verify raw mode bypasses ^S/^P handling
+### Implemented Tests
+1. **T1:** E=char - output "RAW" via F6 ✅
+2. **T2:** E=CR/LF - output control characters ✅
+3. **T3:** E=FDH - blocking input (reads 'X') ✅
+4. **T4:** E=FFH - non-blocking input (reads 'Y') ✅
+5. **T5:** E=FEH - status query ✅
+6. **T6:** E=FFH - non-blocking when no input (returns 0) ✅
 
 ### Implementation Notes
-- Most useful for games/interactive programs
-- Non-blocking tests can run without input injection
-- Blocking test (T4) requires harness input
+- Input injection: "XY" for blocking and non-blocking reads
+- F6 bypasses ^S/^P handling (raw mode)
 
 ---
 
