@@ -17,12 +17,12 @@ The BIOS provides hardware abstraction through a 17-entry jump table. This imple
 | 12h | PUNCH | Paper tape punch - output char in C |
 | 15h | READER | Paper tape reader - return char in A |
 | 18h | HOME | Move disk head to track 0 |
-| 1Bh | SELDSK | Select disk (C=drive) - return HL=DPH or 0000h |
+| 1Bh | SELDSK | Select disk (C=drive, E=login) - return HL=DPH or 0000h |
 | 1Eh | SETTRK | Set track number (BC=track) |
 | 21h | SETSEC | Set sector number (BC=sector) |
 | 24h | SETDMA | Set DMA address (BC=address) |
 | 27h | READ | Read sector - return A=0 success, 1 error |
-| 2Ah | WRITE | Write sector (C=type) - return A=0 success, 1 error |
+| 2Ah | WRITE | Write sector (C=type: 0=normal, 1=dir, 2=first) - return A=0/1 |
 | 2Dh | LISTST | Printer status - return FFh if ready |
 | 30h | SECTRAN | Translate sector (BC=logical, DE=table) - return HL=physical |
 

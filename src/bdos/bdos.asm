@@ -1308,7 +1308,7 @@ F20OC2:
 ;   DMA     - 128 bytes of data to write
 ;
 ; Output:
-;   A       - 0 on success, 1 on error (disk full)
+;   A       - 0 on success, 1 on error, 2 on disk full
 ;   L       - Same as A
 ;   H       - 0
 ;   FCB     - CR incremented, RC/extent updated
@@ -1319,6 +1319,8 @@ F20OC2:
 ; Notes:
 ;   - Closes current extent and creates new one at 128 records
 ;   - Allocates blocks from allocation vector as needed
+;   - Error 1 = I/O error or directory full
+;   - Error 2 = disk full (no free blocks)
 ;-------------------------------------------------------------------------------
 
 FUNC21:
@@ -1373,7 +1375,7 @@ F21OK:
         MVI     L, 0
         JMP     SETRET
 F21ERR:
-        MVI     L, 1
+        MOV     L, A            ; Pass through error code (1=error, 2=disk full)
         MVI     H, 0
         JMP     SETRET
 
@@ -1887,8 +1889,9 @@ F32SET:
 ;   DE      - [REQ] FCB address (must be opened, R0-R2 set)
 ;
 ; Output:
-;   A       - 0 on success, 1 on seek error, 3 on close error,
-;             4 on seek to unwritten extent, 6 on seek past end
+;   A       - 0 on success
+;             1 on unwritten record (CR >= RC or block unallocated)
+;             6 on seek past end of disk (R2 > 0)
 ;   L       - Same as A
 ;   H       - 0
 ;   DMA     - 128 bytes of file data (on success)
@@ -1904,12 +1907,15 @@ F32SET:
 FUNC33:
         CALL    SETFCB
         CALL    RNDREC          ; Convert random record to extent/record
+        ORA     A
+        JNZ     F33ERR          ; RNDREC returned error (6=past disk)
         ; Load CR from FCB for READREC
         LHLD    CURFCB
         LXI     D, 32
         DAD     D
         MOV     A, M            ; A = CR
         CALL    READREC
+F33ERR:
         MOV     L, A
         MVI     H, 0
         JMP     SETRET
@@ -1927,8 +1933,9 @@ FUNC33:
 ;   DMA     - 128 bytes of data to write
 ;
 ; Output:
-;   A       - 0 on success, 1 on seek error, 2 on disk full,
-;             5 on directory full (new extent needed)
+;   A       - 0 on success
+;             2 on disk full (no free blocks)
+;             6 on seek past end of disk (R2 > 0)
 ;   L       - Same as A
 ;   H       - 0
 ;
@@ -1943,12 +1950,15 @@ FUNC33:
 FUNC34:
         CALL    SETFCB
         CALL    RNDREC          ; Convert random record to extent/record
+        ORA     A
+        JNZ     F34ERR          ; RNDREC returned error (6=past disk)
         ; Load CR from FCB for WRITEREC
         LHLD    CURFCB
         LXI     D, 32
         DAD     D
         MOV     A, M            ; A = CR
-        CALL    WRITEREC
+        CALL    WRITEREC        ; Returns 0=success, 2=disk full
+F34ERR:
         MOV     L, A
         MVI     H, 0
         JMP     SETRET
@@ -2635,7 +2645,7 @@ RRECEOF:
 ;   DMADDR  - [REQ] DMA buffer with data
 ;
 ; Output:
-;   A       - 0 on success, 1 on error (disk full)
+;   A       - 0 on success, 2 on disk full (no free blocks)
 ;   FCB     - RC updated if record extends file
 ;
 ; Clobbers:
@@ -2675,7 +2685,7 @@ WRECSK:
         POP     PSW
         RET
 WRECERR:
-        MVI     A, 1
+        MVI     A, 2            ; 2 = disk full
         RET
 
 ; GETBLOCK - Get block number for record from FCB allocation map
@@ -3197,14 +3207,16 @@ DIVDN:
 ;   CURFCB  - [REQ] FCB with random record field set
 ;
 ; Output:
-;   FCB     - Extent (byte 12) and CR (byte 32) updated
+;   A       - 0 on success, 6 if R2 > 0 (seek past end of disk)
+;   FCB     - Extent (byte 12) and CR (byte 32) updated (if success)
 ;
 ; Clobbers:
-;   A, DE, HL, flags
+;   DE, HL, flags
 ;
 ; Notes:
 ;   - Extent = random_record / 128
 ;   - CR = random_record mod 128
+;   - Maximum addressable record is 65535 (R2 must be 0)
 ;-------------------------------------------------------------------------------
 
 RNDREC:
@@ -3214,6 +3226,10 @@ RNDREC:
         MOV     E, M            ; R0
         INX     H
         MOV     D, M            ; R1
+        INX     H
+        MOV     A, M            ; R2
+        ORA     A               ; Check if R2 > 0
+        JNZ     RNDERR6         ; Past end of disk
         ; Record = R1:R0, extent = record / 128, CR = record mod 128
         ; CR = R0 AND 7FH (low 7 bits)
         MOV     A, E
@@ -3241,6 +3257,9 @@ RNDREC:
         ; For random access, just return success
         ; The FCB should already have correct allocation from OPEN
         XRA     A               ; Return success
+        RET
+RNDERR6:
+        MVI     A, 6            ; 6 = seek past end of disk
         RET
 
 ; COPYB - Copy B bytes from HL to DE

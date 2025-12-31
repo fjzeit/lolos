@@ -30,14 +30,14 @@ The BDOS provides system calls accessed via `CALL 0005h` with:
 |----|------|-------|--------|-------------|
 | 12 | S_BDOSVER | - | HL=0022h | Return version (2.2) |
 | 13 | DRV_ALLRESET | - | - | Reset disk system |
-| 14 | DRV_SET | E=drive | - | Select disk (0=A:) |
+| 14 | DRV_SET | E=drive | A=0 | Select disk (0=A:) |
 | 15 | F_OPEN | DE=FCB | A=dir code | Open file |
 | 16 | F_CLOSE | DE=FCB | A=dir code | Close file |
 | 17 | F_SFIRST | DE=FCB | A=dir code | Search first |
 | 18 | F_SNEXT | - | A=dir code | Search next |
 | 19 | F_DELETE | DE=FCB | A=dir code | Delete file |
 | 20 | F_READ | DE=FCB | A=0/1 | Read sequential |
-| 21 | F_WRITE | DE=FCB | A=0/1 | Write sequential |
+| 21 | F_WRITE | DE=FCB | A=0/1/2 | Write sequential |
 | 22 | F_MAKE | DE=FCB | A=dir code | Create file |
 | 23 | F_RENAME | DE=FCB | A=dir code | Rename file |
 | 24 | DRV_LOGINVEC | - | HL=bitmap | Get login vector |
@@ -49,17 +49,26 @@ The BDOS provides system calls accessed via `CALL 0005h` with:
 | 30 | F_ATTRIB | DE=FCB | A=dir code | Set file attributes |
 | 31 | DRV_DPB | - | HL=addr | Get DPB address |
 | 32 | F_USERNUM | E=user/FFh | A=user | Get/set user number |
-| 33 | F_READRAND | DE=FCB | A=error | Read random |
-| 34 | F_WRITERAND | DE=FCB | A=error | Write random |
+| 33 | F_READRAND | DE=FCB | A=0/1/6 | Read random |
+| 34 | F_WRITERAND | DE=FCB | A=0/2/6 | Write random |
 | 35 | F_SIZE | DE=FCB | - | Compute file size |
 | 36 | F_RANDREC | DE=FCB | - | Set random record |
 | 37 | DRV_RESET | DE=bitmap | - | Reset specific drives |
-| 40 | F_WRITEZF | DE=FCB | A=error | Write random zero fill |
+| 40 | F_WRITEZF | DE=FCB | A=0/2/6 | Write random zero fill |
 
 ## Directory Code Returns
 
 - 00h-03h: Success (index into directory buffer)
 - FFh (255): Error / not found
+
+## Sequential/Random I/O Error Codes
+
+| Code | Meaning | Functions |
+|------|---------|-----------|
+| 0 | Success | F20, F21, F33, F34, F40 |
+| 1 | Unwritten record or I/O error | F20, F21, F33 |
+| 2 | Disk full (no free blocks) | F21, F34, F40 |
+| 6 | Seek past end of disk (R2 > 0) | F33, F34, F40 |
 
 ## Implementation Notes
 
