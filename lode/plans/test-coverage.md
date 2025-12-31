@@ -23,7 +23,8 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 14 | DMA Address (F26) | ✅ Complete |
 | 15 | Allocation & R/O (F27, F28, F29) | ✅ Complete |
 | 16 | File Attributes Enhancement (F30) | ✅ Complete |
-| 17-18 | Remaining phases | Pending |
+| 17 | User Number Enhancement (F32) | ✅ Complete |
+| 18 | Random Access Enhancement | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
@@ -429,21 +430,27 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 17: User Number Enhancement (F32)
-**Existing file:** `tests/programs/tuser.asm`
+**File:** `tests/programs/tuser.asm` ✅ Enhanced
 
 ### Functions
 | Fn | Name | Description |
 |----|------|-------------|
 | F32 | F_USERNUM | Get/set user number |
 
-### Current Coverage
-- Basic get/set operations
+### Implemented Tests (7 total)
+1. **T1:** Initial user = 0 after reset ✅
+2. **T2:** Set user 5, get 5 ✅
+3. **T3:** Set user 15 (max), get 15 ✅
+4. **T4:** User masked to 0-15 (set 0x3F, get 0x0F) ✅
+5. **T5:** Reset clears user to 0 ✅
+6. **T6:** E=FFH idempotent (get without changing) ✅
+7. **T7:** User isolation (file in user 0 not visible from user 1) ✅
 
-### Additional Test Cases
-1. **T-new1:** Boundary values (0, 15)
-2. **T-new2:** Invalid user number (>15)
-3. **T-new3:** User isolation (file in user 0 not visible from user 1)
-4. **T-new4:** E=FFH returns current without changing
+### Implementation Notes
+- Boundary values (0, 15) covered by T1, T3
+- Invalid user number masking covered by T4
+- User isolation verifies file namespace separation between users
+- E=FFH tested 3 times in sequence to confirm no side effects
 
 ---
 
@@ -499,7 +506,7 @@ All tests follow the standard structure in `tests/programs/`:
 - `tests/programs/tdisk.asm` (Phase 7) ✅
 - `tests/programs/tsearch.asm` (Phase 9) ✅
 - `tests/programs/tattrib.asm` (Phase 16) ✅
-- `tests/programs/tuser.asm` (Phase 17)
+- `tests/programs/tuser.asm` (Phase 17) ✅
 - `tests/programs/trandom.asm` (Phase 18)
 
 ## Test Harness Updates
