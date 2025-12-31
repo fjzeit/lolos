@@ -10,13 +10,13 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 1 | Console Character I/O (F1, F2) | ✅ Complete |
 | 2 | Console String I/O (F9, F10, F11) | ✅ Complete |
 | 3 | Direct Console I/O (F6) | ✅ Complete |
-| 4 | Auxiliary & List (F3, F4, F5) | Pending |
+| 4 | Auxiliary & List (F3, F4, F5) | ✅ Complete |
 | 5-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
-- **Console I/O (F1-F11):** 9/11 tested (F1, F2, F6, F7, F8, F9, F10, F11 + implicit)
+- **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
 - **Disk/File (F12-F40):** 23/27 tested
-- **Missing dedicated tests:** F3, F4, F5, F15, F16, F19, F20, F21, F22, F23, F26
+- **Missing dedicated tests:** F15, F16, F19, F20, F21, F22, F23, F26
 
 ### Test Program Pattern
 All tests follow the standard structure in `tests/programs/`:
@@ -95,7 +95,7 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 4: Auxiliary & List Devices (F3, F4, F5)
-**New file:** `tests/programs/tauxlst.asm`
+**File:** `tests/programs/tauxlst.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
@@ -104,15 +104,17 @@ All tests follow the standard structure in `tests/programs/`:
 | F4 | A_WRITE | Auxiliary/punch output |
 | F5 | L_WRITE | List/printer output |
 
-### Test Cases
-1. **T1:** F4 output character to auxiliary device
-2. **T2:** F5 output character to list device
-3. **T3:** F3 input from auxiliary (requires BIOS reader stub)
+### Implemented Tests
+1. **T1:** F4 punch output ("PU") ✅
+2. **T2:** F5 list output ("LST") ✅
+3. **T3:** F5 list CR/LF ✅
+4. **T4:** F3 reader input ✅
+5. **T5:** F3 returns 7-bit value ✅
 
 ### Implementation Notes
-- These functions are rarely used in modern contexts
-- Verify BIOS calls are made correctly
-- May need BIOS stubs that just succeed without hardware
+- Legacy devices rarely used in modern contexts
+- In cpmsim, reader returns EOF (1AH) or 0 when no data
+- Tests verify functions work without crashing
 
 ---
 

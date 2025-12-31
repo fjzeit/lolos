@@ -49,7 +49,7 @@ flowchart TD
 4. **Execute**: Pipes commands to cpmsim via stdin
 5. **Verify**: Checks output for expected patterns
 
-### Current Tests (19 total)
+### Current Tests (20 total)
 
 | Test | Program | Description | BDOS Functions Tested |
 |------|---------|-------------|----------------------|
@@ -72,8 +72,9 @@ flowchart TD
 | conch | tconch.asm | Console character I/O | F1, F2 |
 | constr | tconstr.asm | Console string I/O | F9, F10, F11 |
 | rawio | trawio.asm | Direct console I/O | F6 |
+| auxlst | tauxlst.asm | Auxiliary/list devices | F3, F4, F5 |
 
-**Status**: 19/19 tests pass
+**Status**: 20/20 tests pass
 
 ### Test Programs (tests/programs/*.asm)
 
@@ -93,6 +94,7 @@ flowchart TD
 | tconch.asm | Console character I/O - F1 input with echo, F2 output |
 | tconstr.asm | Console string I/O - F9 print, F10 buffered input, F11 status |
 | trawio.asm | Direct console I/O - F6 all 4 modes (output, status, blocking/non-blocking input) |
+| tauxlst.asm | Auxiliary/list devices - F3 reader, F4 punch, F5 list output |
 
 All test programs follow the same pattern:
 1. Print test header

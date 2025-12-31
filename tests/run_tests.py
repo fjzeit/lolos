@@ -153,6 +153,7 @@ class CpmTester:
             "tconch",
             "tconstr",
             "trawio",
+            "tauxlst",
         ]
 
         for prog in test_programs:
@@ -220,6 +221,7 @@ class CpmTester:
             "tconch.com",
             "tconstr.com",
             "trawio.com",
+            "tauxlst.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -691,6 +693,20 @@ def test_rawio(tester: CpmTester):
     return False, "Direct console I/O tests failed", output
 
 
+def test_auxlst(tester: CpmTester):
+    """Test auxiliary and list devices (F3, F4, F5)"""
+    # No input injection needed - tests output devices and reader
+    success, output = tester.run_cpmsim(["TAUXLST"], timeout=10)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Auxiliary/list device tests passed", output
+
+    return False, "Auxiliary/list device tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -743,6 +759,7 @@ def main():
         ("conch", lambda: test_conch(tester)),
         ("constr", lambda: test_constr(tester)),
         ("rawio", lambda: test_rawio(tester)),
+        ("auxlst", lambda: test_auxlst(tester)),
     ]
 
     # Filter tests if specific test requested
