@@ -276,11 +276,206 @@ TEST5:
         CPI     4               ; Should be 0-3
         JNC     T5FAIL
         CALL    TPASS
-        JMP     CLEANUP
+        JMP     TEST6
 
 T5FAIL:
         CALL    TFAIL
         LXI     D, MSGDC
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 6: Verify DMA buffer has valid directory entry
+        ;---------------------------------------------------------------
+TEST6:
+        MVI     A, 6
+        STA     TESTNUM
+        LXI     D, MSG_T6
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Set DMA for search results
+        LXI     D, DMABUF
+        MVI     C, F_SETDMA
+        CALL    BDOS
+
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_SFIRST
+        CALL    BDOS
+        CPI     0FFH
+        JZ      T6FAIL
+
+        ; A = directory code (0-3), entry is at DMABUF + (A * 32)
+        ; Calculate offset
+        ADD     A               ; A * 2
+        ADD     A               ; A * 4
+        ADD     A               ; A * 8
+        ADD     A               ; A * 16
+        ADD     A               ; A * 32
+        MOV     E, A
+        MVI     D, 0
+        LXI     H, DMABUF
+        DAD     D               ; HL = DMABUF + offset
+
+        ; Check first byte is user number (0-15, not E5H)
+        MOV     A, M
+        CPI     0E5H            ; Deleted?
+        JZ      T6FAIL
+        CPI     16              ; User > 15?
+        JNC     T6FAIL
+
+        ; Check first char of filename is 'S' (from SRCH1)
+        INX     H
+        MOV     A, M
+        CPI     'S'
+        JNZ     T6FAIL
+        CALL    TPASS
+        JMP     TEST7
+
+T6FAIL:
+        CALL    TFAIL
+        LXI     D, MSGDMA
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 7: Search with ? in middle position (SR?H1.TST)
+        ;---------------------------------------------------------------
+TEST7:
+        MVI     A, 7
+        STA     TESTNUM
+        LXI     D, MSG_T7
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        LXI     H, FCBWC3
+        CALL    SETFCB
+        MVI     C, F_SFIRST
+        CALL    BDOS
+        ; Should find SRCH1.TST
+        CPI     0FFH
+        JZ      T7FAIL
+        CALL    TPASS
+        JMP     TEST8
+
+T7FAIL:
+        CALL    TFAIL
+        LXI     D, MSGNF
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 8: Search all files (*.*) - should find many
+        ;---------------------------------------------------------------
+TEST8:
+        MVI     A, 8
+        STA     TESTNUM
+        LXI     D, MSG_T8
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        XRA     A
+        STA     FCOUNT
+
+        LXI     H, FCBALL
+        CALL    SETFCB
+        MVI     C, F_SFIRST
+        CALL    BDOS
+        CPI     0FFH
+        JZ      T8CHECK
+
+T8LOOP:
+        LDA     FCOUNT
+        INR     A
+        STA     FCOUNT
+        CPI     50              ; Safety limit
+        JNC     T8CHECK
+
+        MVI     C, F_SNEXT
+        CALL    BDOS
+        CPI     0FFH
+        JNZ     T8LOOP
+
+T8CHECK:
+        ; Should find at least 3 (our test files) plus system files
+        LDA     FCOUNT
+        CPI     3
+        JC      T8FAIL
+        CALL    TPASS
+        JMP     TEST9
+
+T8FAIL:
+        CALL    TFAIL
+        LXI     D, MSGCNT
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+        LDA     FCOUNT
+        CALL    PRTHEX
+        CALL    CRLF
+
+        ;---------------------------------------------------------------
+        ; Test 9: Verify full filename match in DMA
+        ;---------------------------------------------------------------
+TEST9:
+        MVI     A, 9
+        STA     TESTNUM
+        LXI     D, MSG_T9
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Set DMA
+        LXI     D, DMABUF
+        MVI     C, F_SETDMA
+        CALL    BDOS
+
+        ; Search for SRCH2.TST
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_SFIRST
+        CALL    BDOS
+        CPI     0FFH
+        JZ      T9FAIL
+
+        ; Get entry offset
+        ADD     A
+        ADD     A
+        ADD     A
+        ADD     A
+        ADD     A               ; A * 32
+        MOV     E, A
+        MVI     D, 0
+        LXI     H, DMABUF
+        DAD     D
+        INX     H               ; Skip user byte, now at filename
+
+        ; Verify "SRCH2   TST"
+        MVI     A, 'S'
+        CMP     M
+        JNZ     T9FAIL
+        INX     H
+        MVI     A, 'R'
+        CMP     M
+        JNZ     T9FAIL
+        INX     H
+        MVI     A, 'C'
+        CMP     M
+        JNZ     T9FAIL
+        INX     H
+        MVI     A, 'H'
+        CMP     M
+        JNZ     T9FAIL
+        INX     H
+        MVI     A, '2'
+        CMP     M
+        JNZ     T9FAIL
+
+        CALL    TPASS
+        JMP     CLEANUP
+
+T9FAIL:
+        CALL    TFAIL
+        LXI     D, MSGNAME
         MVI     C, F_PRTSTR
         CALL    BDOS
 
@@ -448,6 +643,16 @@ FCBWC2: DB      0, 'SRCH?   ', 'TST'
         DB      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
         DB      0,0,0,0
 
+; Wildcard SR?H1.TST (? in middle)
+FCBWC3: DB      0, 'SR?H1   ', 'TST'
+        DB      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        DB      0,0,0,0
+
+; Wildcard *.* (all files)
+FCBALL: DB      0, '????????', '???'
+        DB      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+        DB      0,0,0,0
+
 ; Variables
 FCOUNT: DB      0
 
@@ -466,6 +671,10 @@ MSG_T2: DB      'T2: F17 Search non-existent... ', '$'
 MSG_T3: DB      'T3: F17/18 Wildcard *.TST... ', '$'
 MSG_T4: DB      'T4: F17/18 Wildcard SRCH?... ', '$'
 MSG_T5: DB      'T5: Directory code 0-3... ', '$'
+MSG_T6: DB      'T6: Verify DMA entry... ', '$'
+MSG_T7: DB      'T7: Wildcard SR?H1.TST... ', '$'
+MSG_T8: DB      'T8: Search *.* (all)... ', '$'
+MSG_T9: DB      'T9: Verify filename in DMA... ', '$'
 
 MSGOK:  DB      'OK', CR, LF, '$'
 MSGNG:  DB      'NG', CR, LF, '$'
@@ -473,6 +682,8 @@ MSGNF:  DB      'File not found', CR, LF, '$'
 MSGFND: DB      'Should not find', CR, LF, '$'
 MSGCNT: DB      'Expected 3+, got ', '$'
 MSGDC:  DB      'Invalid directory code', CR, LF, '$'
+MSGDMA: DB      'Invalid DMA entry', CR, LF, '$'
+MSGNAME: DB     'Filename mismatch', CR, LF, '$'
 
 MSGSUMM: DB     CR, LF, 'Summary: ', '$'
 MSGOF:  DB      ' of ', '$'

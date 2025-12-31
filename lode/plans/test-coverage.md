@@ -15,7 +15,8 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 6 | Version Enhancement (F12) | ✅ Complete |
 | 7 | Disk System (F13, F14, F24, F25, F31, F37) | ✅ Complete |
 | 8 | File Open/Close (F15, F16) | ✅ Complete |
-| 9-18 | Remaining phases | Pending |
+| 9 | Directory Search Enhancement (F17, F18) | ✅ Complete |
+| 10-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
@@ -219,7 +220,7 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 9: Directory Search Enhancement (F17, F18)
-**Existing file:** `tests/programs/tsearch.asm`
+**File:** `tests/programs/tsearch.asm` ✅ Enhanced
 
 ### Functions
 | Fn | Name | Description |
@@ -227,16 +228,21 @@ All tests follow the standard structure in `tests/programs/`:
 | F17 | F_SFIRST | Search for first match |
 | F18 | F_SNEXT | Search for next match |
 
-### Current Coverage
-- Basic wildcard search tested
+### Implemented Tests (9 total)
+1. **T1:** F17 Search exact file (SRCH1.TST) ✅
+2. **T2:** F17 Search non-existent file ✅
+3. **T3:** F17/18 Wildcard *.TST (finds 3+) ✅
+4. **T4:** F17/18 Wildcard SRCH?.TST ✅
+5. **T5:** Directory code 0-3 validation ✅
+6. **T6:** Verify DMA entry has valid user/filename ✅
+7. **T7:** Wildcard SR?H1.TST (? in middle) ✅
+8. **T8:** Search *.* (all files, finds 3+) ✅
+9. **T9:** Verify full filename match in DMA ✅
 
-### Additional Test Cases
-1. **T-new1:** Search with ? wildcard in various positions
-2. **T-new2:** Search with * wildcard (all files)
-3. **T-new3:** Search empty directory (expect FFH)
-4. **T-new4:** Verify directory buffer contents (DMA area)
-5. **T-new5:** Search for specific extent number
-6. **T-new6:** Search spanning multiple directory sectors
+### Implementation Notes
+- Creates SRCH1/2/3.TST test files during setup
+- Cleans up test files after tests
+- Verifies DMA buffer contents match expected directory format
 
 ---
 
@@ -454,10 +460,10 @@ All tests follow the standard structure in `tests/programs/`:
 - `tests/programs/talloc.asm` (Phase 15, optional)
 
 ## Files to Enhance
-- `tests/programs/tiobyte.asm` (Phases 5, 15)
-- `tests/programs/tversion.asm` (Phase 6)
-- `tests/programs/tdisk.asm` (Phase 7)
-- `tests/programs/tsearch.asm` (Phase 9)
+- `tests/programs/tiobyte.asm` (Phases 5, 15) ✅
+- `tests/programs/tversion.asm` (Phase 6) ✅
+- `tests/programs/tdisk.asm` (Phase 7) ✅
+- `tests/programs/tsearch.asm` (Phase 9) ✅
 - `tests/programs/tattrib.asm` (Phase 16)
 - `tests/programs/tuser.asm` (Phase 17)
 - `tests/programs/trandom.asm` (Phase 18)
