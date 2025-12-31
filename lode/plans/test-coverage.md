@@ -12,7 +12,8 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 3 | Direct Console I/O (F6) | ✅ Complete |
 | 4 | Auxiliary & List (F3, F4, F5) | ✅ Complete |
 | 5 | IOBYTE Enhancement (F7, F8) | ✅ Complete |
-| 6-18 | Remaining phases | Pending |
+| 6 | Version Enhancement (F12) | ✅ Complete |
+| 7-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
@@ -141,19 +142,18 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 6: Version Enhancement (F12)
-**Existing file:** `tests/programs/tversion.asm`
+**File:** `tests/programs/tversion.asm` ✅ Enhanced
 
 ### Functions
 | Fn | Name | Description |
 |----|------|-------------|
 | F12 | S_BDOSVER | Return CP/M version |
 
-### Current Coverage
-- Verifies return value is 0022H
-
-### Additional Test Cases
-1. **T-new1:** Verify A=L=22H, B=H=00H (full register check)
-2. **T-new2:** Call multiple times (verify idempotence)
+### Implemented Tests (4 total)
+1. **T1:** HL=0022H ✅
+2. **T2:** A=L=22H ✅
+3. **T3:** B=H=00H ✅
+4. **T4:** Idempotence (3 calls, same result) ✅
 
 ---
 
