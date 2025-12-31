@@ -17,12 +17,13 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 8 | File Open/Close (F15, F16) | ✅ Complete |
 | 9 | Directory Search Enhancement (F17, F18) | ✅ Complete |
 | 10 | File Delete (F19) | ✅ Complete |
-| 11-18 | Remaining phases | Pending |
+| 11 | Sequential I/O (F20, F21) | ✅ Complete |
+| 12-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
-- **Disk/File (F12-F40):** 26/27 tested ✅ F15, F16, F19 now covered
-- **Missing dedicated tests:** F20, F21, F22, F23, F26
+- **Disk/File (F12-F40):** 28/27 tested ✅ F15, F16, F19, F20, F21 now covered
+- **Missing dedicated tests:** F22, F23, F26
 
 ### Test Program Pattern
 All tests follow the standard structure in `tests/programs/`:
@@ -273,7 +274,7 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 11: Sequential I/O (F20, F21)
-**New file:** `tests/programs/tseqio.asm`
+**File:** `tests/programs/tseqio.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
@@ -281,19 +282,21 @@ All tests follow the standard structure in `tests/programs/`:
 | F20 | F_READ | Read sequential record |
 | F21 | F_WRITE | Write sequential record |
 
-### Test Cases
-1. **T1:** Write single record
-2. **T2:** Read single record back
-3. **T3:** Write/read multiple records (verify CR increments)
-4. **T4:** Read past EOF (expect A=1)
-5. **T5:** Write to full disk (expect A=2) - hard to test
-6. **T6:** Extent transition on write (record 128 → new extent)
-7. **T7:** Extent transition on read
-8. **T8:** Verify DMA buffer contents match written data
+### Implemented Tests (8 total)
+1. **T1:** F21 Write single record ✅
+2. **T2:** F20 Read single record back ✅
+3. **T3:** Verify data matches (00-7F pattern) ✅
+4. **T4:** CR increment (3 writes, verify 0→1→2→3) ✅
+5. **T5:** Read past EOF (expect A=1) ✅
+6. **T6:** Extent transition on write (129 records) ✅
+7. **T7:** Extent transition on read (129 records) ✅
+8. **T8:** Verify DMA buffer contents after read ✅
 
 ### Implementation Notes
 - More focused than existing fileio.asm/bigfile.asm
-- Tests edge cases and error conditions specifically
+- Tests CR increment explicitly
+- Tests extent transitions (record 129 forces new extent)
+- Uses SEQIO.TST as temporary test file (cleaned up after)
 
 ---
 
@@ -456,7 +459,7 @@ All tests follow the standard structure in `tests/programs/`:
 - `tests/programs/tauxlst.asm` (Phase 4) ✅
 - `tests/programs/topen.asm` (Phase 8) ✅
 - `tests/programs/tdelete.asm` (Phase 10) ✅
-- `tests/programs/tseqio.asm` (Phase 11)
+- `tests/programs/tseqio.asm` (Phase 11) ✅
 - `tests/programs/tmake.asm` (Phase 12)
 - `tests/programs/trename.asm` (Phase 13)
 - `tests/programs/tdma.asm` (Phase 14)

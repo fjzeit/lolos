@@ -49,7 +49,7 @@ flowchart TD
 4. **Execute**: Pipes commands to cpmsim via stdin
 5. **Verify**: Checks output for expected patterns
 
-### Current Tests (20 total)
+### Current Tests (23 total)
 
 | Test | Program | Description | BDOS Functions Tested |
 |------|---------|-------------|----------------------|
@@ -62,19 +62,22 @@ flowchart TD
 | save | - | SAVE command | F22, F21 |
 | fileio | fileio.asm | Sequential file I/O | F22, F21, F16, F15, F20 |
 | bigfile | bigfile.asm | Multi-extent file | F22, F21, F16, F15, F20 (extent spanning) |
-| version | tversion.asm | Version check | F12 |
-| disk_mgmt | tdisk.asm | Disk management | F13, F14, F24, F25, F27, F29, F31, F37 |
-| search | tsearch.asm | Directory search | F17, F18 |
+| version | tversion.asm | Version check (4 tests) | F12 |
+| disk_mgmt | tdisk.asm | Disk management (17 tests) | F13, F14, F24, F25, F27, F29, F31, F37 |
+| search | tsearch.asm | Directory search (9 tests) | F17, F18 |
 | user | tuser.asm | User number | F32 |
 | random | trandom.asm | Random access | F33, F34, F35, F36, F40 |
 | attrib | tattrib.asm | File attributes | F30 |
-| iobyte | tiobyte.asm | IOBYTE and write protect | F7, F8, F28 |
+| iobyte | tiobyte.asm | IOBYTE and write protect (8 tests) | F7, F8, F28 |
 | conch | tconch.asm | Console character I/O | F1, F2 |
 | constr | tconstr.asm | Console string I/O | F9, F10, F11 |
 | rawio | trawio.asm | Direct console I/O | F6 |
 | auxlst | tauxlst.asm | Auxiliary/list devices | F3, F4, F5 |
+| open | topen.asm | File open/close (8 tests) | F15, F16 |
+| delete | tdelete.asm | File delete (8 tests) | F19 |
+| seqio | tseqio.asm | Sequential I/O (8 tests) | F20, F21 |
 
-**Status**: 20/20 tests pass
+**Status**: 23/23 tests pass
 
 ### Test Programs (tests/programs/*.asm)
 
@@ -84,17 +87,20 @@ flowchart TD
 |------|-------------|
 | fileio.asm | Sequential file I/O - create, write, close, reopen, read, verify |
 | bigfile.asm | Multi-extent file - 200 records spanning 2 extents |
-| tversion.asm | Version check - verifies F12 returns 0022H |
-| tdisk.asm | Disk management functions |
-| tsearch.asm | Directory search with wildcards |
+| tversion.asm | Version check - verifies F12 returns 0022H (4 tests) |
+| tdisk.asm | Disk management - F13,14,24,25,27,29,31,37 + DPB fields (17 tests) |
+| tsearch.asm | Directory search with wildcards + DMA verification (9 tests) |
 | tuser.asm | User number get/set |
 | trandom.asm | Random access read/write/size/setrandom |
 | tattrib.asm | File attributes (read-only, system, archive) |
-| tiobyte.asm | IOBYTE and write protect operations |
+| tiobyte.asm | IOBYTE and write protect operations (8 tests) |
 | tconch.asm | Console character I/O - F1 input with echo, F2 output |
 | tconstr.asm | Console string I/O - F9 print, F10 buffered input, F11 status |
 | trawio.asm | Direct console I/O - F6 all 4 modes (output, status, blocking/non-blocking input) |
 | tauxlst.asm | Auxiliary/list devices - F3 reader, F4 punch, F5 list output |
+| topen.asm | File open/close - FCB field verification (8 tests) |
+| tdelete.asm | File delete - single, wildcard, verification (8 tests) |
+| tseqio.asm | Sequential I/O - CR increment, EOF, extent transitions (8 tests) |
 
 All test programs follow the same pattern:
 1. Print test header

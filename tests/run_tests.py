@@ -156,6 +156,7 @@ class CpmTester:
             "tauxlst",
             "topen",
             "tdelete",
+            "tseqio",
         ]
 
         for prog in test_programs:
@@ -226,6 +227,7 @@ class CpmTester:
             "tauxlst.com",
             "topen.com",
             "tdelete.com",
+            "tseqio.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -737,6 +739,20 @@ def test_delete(tester: CpmTester):
     return False, "File delete tests failed", output
 
 
+def test_seqio(tester: CpmTester):
+    """Test sequential I/O functions (F20, F21)"""
+    # Give more time for extent transition tests (129 records)
+    success, output = tester.run_cpmsim(["TSEQIO"], timeout=60)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Sequential I/O tests passed", output
+
+    return False, "Sequential I/O tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -792,6 +808,7 @@ def main():
         ("auxlst", lambda: test_auxlst(tester)),
         ("open", lambda: test_open(tester)),
         ("delete", lambda: test_delete(tester)),
+        ("seqio", lambda: test_seqio(tester)),
     ]
 
     # Filter tests if specific test requested
