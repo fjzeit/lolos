@@ -1,7 +1,14 @@
 ; BDOS File Attributes Test (Function 30)
-; Tests: Setting R/O and SYS attributes on files
+; Tests: Setting R/O, SYS, Archive attributes and persistence
 ;
 ; F30 - Set file attributes (copies FCB+9..11 to directory)
+;
+; T1: Set R/O attribute (T1 bit 7)
+; T2: Set SYS attribute (T2 bit 7)
+; T3: Clear attributes
+; T4: F30 on non-existent file returns FFH
+; T5: Set Archive attribute (T3 bit 7)
+; T6: Attribute persistence after close/reopen
 
         ORG     0100H
 
@@ -23,6 +30,7 @@ DFCB    EQU     005CH
 ; Attribute bits (in high bit of T1, T2, T3)
 ATTR_RO EQU     80H             ; T1 bit 7 = Read-Only
 ATTR_SYS EQU    80H             ; T2 bit 7 = System
+ATTR_ARC EQU    80H             ; T3 bit 7 = Archive
 
 ; ASCII
 CR      EQU     0DH
@@ -294,11 +302,167 @@ TEST4:
         CPI     0FFH
         JNZ     T4FAIL
         CALL    TPASS
-        JMP     CLEANUP
+        JMP     TEST5
 
 T4FAIL:
         CALL    TFAIL
         LXI     D, MSGNF
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 5: Set Archive attribute (T3 bit 7)
+        ; Note: Clear attributes first since T3 test left file without them
+        ;---------------------------------------------------------------
+TEST5:
+        MVI     A, 5
+        STA     TESTNUM
+        LXI     D, MSG_T5
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Load FCB with Archive bit set in T3 (offset 11)
+        LXI     H, FCB1
+        CALL    SETFCB
+
+        ; Set Archive bit: FCB+11 (T3) high bit
+        LDA     DFCB+11
+        ORI     ATTR_ARC
+        STA     DFCB+11
+
+        ; Call F30
+        LXI     D, DFCB
+        MVI     C, F_ATTRIB
+        CALL    BDOS
+        INR     A
+        JZ      T5FAIL
+
+        ; Verify by searching and checking directory entry
+        LXI     D, DMABUF
+        MVI     C, F_SETDMA
+        CALL    BDOS
+
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_SFIRST
+        CALL    BDOS
+        CPI     0FFH
+        JZ      T5FAIL
+
+        ; A = directory code (0-3), entry at DMABUF + A*32
+        ADD     A
+        ADD     A
+        ADD     A
+        ADD     A
+        ADD     A               ; *32
+        MOV     E, A
+        MVI     D, 0
+        LXI     H, DMABUF
+        DAD     D               ; HL = directory entry
+
+        ; Check T3 (offset 11) has Archive bit
+        LXI     D, 11
+        DAD     D
+        MOV     A, M
+        ANI     ATTR_ARC
+        JZ      T5FAIL
+
+        CALL    TPASS
+        JMP     TEST6
+
+T5FAIL:
+        CALL    TFAIL
+        LXI     D, MSGARC
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 6: Attribute persistence after close/reopen
+        ; Set R/O + Archive, close file, reopen, verify still set
+        ;---------------------------------------------------------------
+TEST6:
+        MVI     A, 6
+        STA     TESTNUM
+        LXI     D, MSG_T6
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Set R/O and Archive attributes
+        LXI     H, FCB1
+        CALL    SETFCB
+
+        LDA     DFCB+9
+        ORI     ATTR_RO
+        STA     DFCB+9
+        LDA     DFCB+11
+        ORI     ATTR_ARC
+        STA     DFCB+11
+
+        ; Apply with F30
+        LXI     D, DFCB
+        MVI     C, F_ATTRIB
+        CALL    BDOS
+        INR     A
+        JZ      T6FAIL
+
+        ; Open the file (this should load fresh FCB from directory)
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_OPEN
+        CALL    BDOS
+        INR     A
+        JZ      T6FAIL
+
+        ; Close the file
+        LXI     D, DFCB
+        MVI     C, F_CLOSE
+        CALL    BDOS
+
+        ; Verify via search - attributes should persist on disk
+        LXI     D, DMABUF
+        MVI     C, F_SETDMA
+        CALL    BDOS
+
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_SFIRST
+        CALL    BDOS
+        CPI     0FFH
+        JZ      T6FAIL
+
+        ; Calculate entry offset
+        ADD     A
+        ADD     A
+        ADD     A
+        ADD     A
+        ADD     A               ; *32
+        MOV     E, A
+        MVI     D, 0
+        LXI     H, DMABUF
+        DAD     D
+
+        ; Check R/O (T1 at offset 9)
+        PUSH    H
+        LXI     D, 9
+        DAD     D
+        MOV     A, M
+        ANI     ATTR_RO
+        POP     H
+        JZ      T6FAIL
+
+        ; Check Archive (T3 at offset 11)
+        LXI     D, 11
+        DAD     D
+        MOV     A, M
+        ANI     ATTR_ARC
+        JZ      T6FAIL
+
+        CALL    TPASS
+        JMP     CLEANUP
+
+T6FAIL:
+        CALL    TFAIL
+        LXI     D, MSGPERS
         MVI     C, F_PRTSTR
         CALL    BDOS
 
@@ -450,6 +614,8 @@ MSG_T1: DB      'T1: Set R/O attribute... ', '$'
 MSG_T2: DB      'T2: Set SYS attribute... ', '$'
 MSG_T3: DB      'T3: Clear attributes... ', '$'
 MSG_T4: DB      'T4: F30 on missing file... ', '$'
+MSG_T5: DB      'T5: Set Archive attribute... ', '$'
+MSG_T6: DB      'T6: Attr persist close/reopen... ', '$'
 
 MSGOK:  DB      'OK', CR, LF, '$'
 MSGOKLN: DB     'OK', CR, LF, '$'
@@ -459,6 +625,8 @@ MSGRO:  DB      'R/O not set', CR, LF, '$'
 MSGSYS: DB      'SYS not set', CR, LF, '$'
 MSGCLR: DB      'Attrs not cleared', CR, LF, '$'
 MSGNF:  DB      'Should return FFH', CR, LF, '$'
+MSGARC: DB      'Archive not set', CR, LF, '$'
+MSGPERS: DB     'Attrs not persisted', CR, LF, '$'
 
 MSGSUMM: DB     CR, LF, 'Summary: ', '$'
 MSGOF:  DB      ' of ', '$'

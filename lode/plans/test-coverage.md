@@ -22,7 +22,8 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 13 | File Rename (F23) | ✅ Complete |
 | 14 | DMA Address (F26) | ✅ Complete |
 | 15 | Allocation & R/O (F27, F28, F29) | ✅ Complete |
-| 16-18 | Remaining phases | Pending |
+| 16 | File Attributes Enhancement (F30) | ✅ Complete |
+| 17-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
@@ -405,21 +406,25 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 16: File Attributes Enhancement (F30)
-**Existing file:** `tests/programs/tattrib.asm`
+**File:** `tests/programs/tattrib.asm` ✅ Enhanced
 
 ### Functions
 | Fn | Name | Description |
 |----|------|-------------|
 | F30 | F_ATTRIB | Set file attributes |
 
-### Current Coverage
-- Basic R/O and SYS flag tests
+### Implemented Tests (6 total)
+1. **T1:** Set R/O attribute (T1 bit 7) ✅
+2. **T2:** Set SYS attribute (T2 bit 7) ✅
+3. **T3:** Clear attributes ✅
+4. **T4:** F30 on non-existent file returns FFH ✅
+5. **T5:** Set Archive attribute (T3 bit 7) ✅
+6. **T6:** Attribute persistence after close/reopen ✅
 
-### Additional Test Cases
-1. **T-new1:** Set archive bit (bit 7 of t3)
-2. **T-new2:** Clear attributes
-3. **T-new3:** Attributes on multi-extent file
-4. **T-new4:** Verify attribute persistence after close/reopen
+### Implementation Notes
+- All three attribute bits tested: R/O (T1), SYS (T2), Archive (T3)
+- Persistence test verifies attributes survive open/close cycle
+- Multi-extent attribute test deferred (requires 129-record file just for attribute testing)
 
 ---
 
@@ -493,7 +498,7 @@ All tests follow the standard structure in `tests/programs/`:
 - `tests/programs/tversion.asm` (Phase 6) ✅
 - `tests/programs/tdisk.asm` (Phase 7) ✅
 - `tests/programs/tsearch.asm` (Phase 9) ✅
-- `tests/programs/tattrib.asm` (Phase 16)
+- `tests/programs/tattrib.asm` (Phase 16) ✅
 - `tests/programs/tuser.asm` (Phase 17)
 - `tests/programs/trandom.asm` (Phase 18)
 
