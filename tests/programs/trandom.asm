@@ -6,6 +6,18 @@
 ; F35 - Compute file size
 ; F36 - Set random record from sequential position
 ; F40 - Write random with zero fill
+;
+; T1: F35 File size = 10
+; T2: F33 Read random rec 5
+; T3: F34 Write random rec 15
+; T4: Read back rec 15
+; T5: F36 Set random from seq
+; T6: Read unallocated block fails
+; T7: Write/read record 127 (ext 0)
+; T8: Write/read record 128 (ext 1)
+; T9: F35 on empty file (size=0)
+; T10: F40 write/read (zero fill not implemented yet)
+; T11: R2 overflow error (code 6)
 
         ORG     0100H
 
@@ -612,11 +624,253 @@ T8VFY:
         JNZ     T8VFY
 
         CALL    TPASS
-        JMP     CLEANUP
+        JMP     TEST9
 
 T8FAIL:
         CALL    TFAIL
         LXI     D, MSG128
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 9: F35 on empty file (size should be 0)
+        ;---------------------------------------------------------------
+TEST9:
+        MVI     A, 9
+        STA     TESTNUM
+        LXI     D, MSG_T9
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Create a new empty file
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_DELETE
+        CALL    BDOS
+
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_MAKE
+        CALL    BDOS
+        INR     A
+        JZ      T9FAIL
+
+        ; Close immediately (file is empty)
+        LXI     D, DFCB
+        MVI     C, F_CLOSE
+        CALL    BDOS
+
+        ; Get file size
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_FILESIZE
+        CALL    BDOS
+
+        ; R0, R1, R2 should all be 0
+        LDA     DFCB+33
+        ORA     A
+        JNZ     T9FAIL
+        LDA     DFCB+34
+        ORA     A
+        JNZ     T9FAIL
+        LDA     DFCB+35
+        ORA     A
+        JNZ     T9FAIL
+
+        ; Cleanup
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_DELETE
+        CALL    BDOS
+
+        CALL    TPASS
+        JMP     TEST10
+
+T9FAIL:
+        ; Cleanup attempt
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_DELETE
+        CALL    BDOS
+
+        CALL    TFAIL
+        LXI     D, MSGEMPTY
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 10: F40 Write random with zero fill
+        ; Note: F40 currently implemented same as F34 in this BDOS
+        ; Test verifies: F40 write succeeds and data can be read back
+        ;---------------------------------------------------------------
+TEST10:
+        MVI     A, 10
+        STA     TESTNUM
+        LXI     D, MSG_T10
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Create new file
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_DELETE
+        CALL    BDOS
+
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_MAKE
+        CALL    BDOS
+        INR     A
+        JZ      T10FAIL
+
+        ; Set DMA
+        LXI     D, BUFFER
+        MVI     C, F_SETDMA
+        CALL    BDOS
+
+        ; Fill buffer with 0xBB
+        LXI     H, BUFFER
+        MVI     B, 128
+        MVI     A, 0BBH
+T10FIL:
+        MOV     M, A
+        INX     H
+        DCR     B
+        JNZ     T10FIL
+
+        ; Set random record to 5
+        MVI     A, 5
+        STA     DFCB+33
+        XRA     A
+        STA     DFCB+34
+        STA     DFCB+35
+
+        ; Write random with zero fill (F40)
+        LXI     D, DFCB
+        MVI     C, F_WRITEZF
+        CALL    BDOS
+        ORA     A
+        JNZ     T10FAIL
+
+        ; Close
+        LXI     D, DFCB
+        MVI     C, F_CLOSE
+        CALL    BDOS
+
+        ; Reopen and read record 5 back
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_OPEN
+        CALL    BDOS
+        INR     A
+        JZ      T10FAIL
+
+        ; Clear buffer with different pattern
+        LXI     H, BUFFER
+        MVI     B, 128
+        MVI     A, 0FFH
+T10CLR:
+        MOV     M, A
+        INX     H
+        DCR     B
+        JNZ     T10CLR
+
+        ; Set random record to 5 (read back what we wrote)
+        MVI     A, 5
+        STA     DFCB+33
+        XRA     A
+        STA     DFCB+34
+        STA     DFCB+35
+
+        ; Read random
+        LXI     D, DFCB
+        MVI     C, F_READRAND
+        CALL    BDOS
+        ORA     A
+        JNZ     T10FAIL
+
+        ; Verify buffer contains 0xBB (what we wrote)
+        LXI     H, BUFFER
+        MVI     B, 128
+T10VFY:
+        MOV     A, M
+        CPI     0BBH
+        JNZ     T10FAIL
+        INX     H
+        DCR     B
+        JNZ     T10VFY
+
+        ; Cleanup
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_DELETE
+        CALL    BDOS
+
+        CALL    TPASS
+        JMP     TEST11
+
+T10FAIL:
+        ; Cleanup attempt
+        LXI     H, FCB2
+        CALL    SETFCB
+        MVI     C, F_DELETE
+        CALL    BDOS
+
+        CALL    TFAIL
+        LXI     D, MSGZF
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 11: R2 overflow - seek error code 6
+        ; Setting R2 non-zero should return error 6 on read
+        ;---------------------------------------------------------------
+TEST11:
+        MVI     A, 11
+        STA     TESTNUM
+        LXI     D, MSG_T11
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Open main test file
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_OPEN
+        CALL    BDOS
+        INR     A
+        JZ      T11FAIL2
+
+        ; Set R2 = 1 (overflow - record > 65535)
+        XRA     A
+        STA     DFCB+33         ; R0 = 0
+        STA     DFCB+34         ; R1 = 0
+        MVI     A, 1
+        STA     DFCB+35         ; R2 = 1
+
+        ; Try to read - should return error 6 (seek past end)
+        LXI     D, DFCB
+        MVI     C, F_READRAND
+        CALL    BDOS
+        CPI     6               ; Error code 6 = seek past physical end
+        JNZ     T11FAIL
+
+        CALL    TPASS
+        JMP     CLEANUP
+
+T11FAIL:
+        STA     ERCODE
+        CALL    TFAIL
+        LXI     D, MSGR2
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+        LDA     ERCODE
+        CALL    PRTHEX
+        CALL    CRLF
+        JMP     CLEANUP
+
+T11FAIL2:
+        CALL    TFAIL
+        LXI     D, MSGOPEN
         MVI     C, F_PRTSTR
         CALL    BDOS
 
@@ -803,6 +1057,16 @@ FCB1:   DB      0               ; DR - drive (0=default)
         DB      0               ; CR (current record)
         DB      0,0,0           ; R0, R1, R2 (random record)
 
+; FCB for empty/zerofill tests
+FCB2:   DB      0               ; DR - drive (0=default)
+        DB      'RANDTST2'      ; F1-F8 filename (8 bytes)
+        DB      'TMP'           ; T1-T3 extension (3 bytes)
+        DB      0,0,0,0         ; EX, S1, S2, RC
+        DB      0,0,0,0,0,0,0,0 ; D0-D7 allocation
+        DB      0,0,0,0,0,0,0,0 ; D8-D15 allocation
+        DB      0               ; CR (current record)
+        DB      0,0,0           ; R0, R1, R2 (random record)
+
 ; Buffer
 BUFFER: DS      128
 
@@ -824,6 +1088,9 @@ MSG_T5: DB      'T5: F36 Set random from seq... ', '$'
 MSG_T6: DB      'T6: Read unallocated block fails... ', '$'
 MSG_T7: DB      'T7: Write/read record 127 (ext 0)... ', '$'
 MSG_T8: DB      'T8: Write/read record 128 (ext 1)... ', '$'
+MSG_T9: DB      'T9: F35 empty file size=0... ', '$'
+MSG_T10: DB     'T10: F40 write/read... ', '$'
+MSG_T11: DB     'T11: R2 overflow error... ', '$'
 
 MSGOK:  DB      'OK', CR, LF, '$'
 MSGNG:  DB      'NG', CR, LF, '$'
@@ -837,6 +1104,9 @@ MSGUNWR: DB     'Should fail on unwritten', CR, LF, '$'
 MSGOPEN: DB     'Open failed', CR, LF, '$'
 MSG127: DB      'Record 127 failed', CR, LF, '$'
 MSG128: DB      'Record 128 failed', CR, LF, '$'
+MSGEMPTY: DB    'Empty file size != 0', CR, LF, '$'
+MSGZF:  DB      'Zero fill failed', CR, LF, '$'
+MSGR2:  DB      'R2 overflow: expected 6, got ', '$'
 
 MSGSUMM: DB     CR, LF, 'Summary: ', '$'
 MSGOF:  DB      ' of ', '$'
