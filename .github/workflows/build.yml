@@ -73,6 +73,8 @@ jobs:
           ./tools/zmac -8 --od src/bios --oo cim,lst src/bios/bios.asm
           ./tools/zmac -8 --od src/bdos --oo cim,lst src/bdos/bdos.asm
           ./tools/zmac -8 --od src/ccp --oo cim,lst src/ccp/ccp.asm
+          ./tools/zmac -8 --od src/hello --oo cim,lst src/hello/hello.asm
+          cp src/hello/hello.cim src/hello/hello.com
 
       - name: Create disk image
         run: python3 tools/mkdisk.py
