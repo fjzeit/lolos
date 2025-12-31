@@ -1,9 +1,9 @@
 ;===============================================================================
-; CP/M Boot Loader
+; LOLOS Boot Loader
 ;===============================================================================
 ;
 ; Description:
-;   Minimal boot loader for CP/M 2.2 on z80pack simulator. Loaded by the
+;   Minimal boot loader for LOLOS on z80pack simulator. Loaded by the
 ;   simulator at address 0000H from track 0, sector 1. Loads CCP, BDOS,
 ;   and BIOS from disk into high memory, then transfers control to BIOS
 ;   cold boot entry point.

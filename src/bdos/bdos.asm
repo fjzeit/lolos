@@ -1,5 +1,5 @@
 ;===============================================================================
-; CP/M 2.2 BDOS - Basic Disk Operating System
+; LOLOS BDOS - Basic Disk Operating System (CP/M 2.2 Compatible)
 ; Target: z80pack (cpmsim)
 ; CPU: Intel 8080 (no Z80 extensions)
 ;===============================================================================

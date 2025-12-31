@@ -1,5 +1,5 @@
 ;===============================================================================
-; CP/M 2.2 CCP - Console Command Processor
+; LOLOS CCP - Console Command Processor (CP/M 2.2 Compatible)
 ; Target: z80pack (cpmsim)
 ; CPU: Intel 8080 (no Z80 extensions)
 ;===============================================================================
