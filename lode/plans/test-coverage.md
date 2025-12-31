@@ -21,7 +21,8 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 12 | File Create (F22) | ✅ Complete |
 | 13 | File Rename (F23) | ✅ Complete |
 | 14 | DMA Address (F26) | ✅ Complete |
-| 15-18 | Remaining phases | Pending |
+| 15 | Allocation & R/O (F27, F28, F29) | ✅ Complete |
+| 16-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
@@ -379,7 +380,7 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 15: Allocation & R/O (F27, F28, F29)
-**Enhance:** `tests/programs/tiobyte.asm` or new `tests/programs/talloc.asm`
+**File:** `tests/programs/talloc.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
@@ -388,13 +389,18 @@ All tests follow the standard structure in `tests/programs/`:
 | F28 | DRV_SETRO | Set drive read-only |
 | F29 | DRV_ROVEC | Get R/O vector bitmap |
 
-### Test Cases
-1. **T1:** F27 returns valid address in HL
-2. **T2:** Verify ALV reflects disk usage (create file, check bit set)
-3. **T3:** F28 set drive R/O
-4. **T4:** F29 verify R/O bit set after F28
-5. **T5:** Write attempt to R/O drive (should fail)
-6. **T6:** F13 reset clears R/O status
+### Implemented Tests (6 total)
+1. **T1:** F27 returns valid ALV address ✅
+2. **T2:** ALV has bits set (files exist) ✅
+3. **T3:** File create + write works ✅
+4. **T4:** F28 sets R/O, F29 reflects it ✅
+5. **T5:** R/O status persists across calls ✅
+6. **T6:** F13 reset clears R/O status ✅
+
+### Implementation Notes
+- Creates ALLOC.TST as test file
+- Tests R/O vector maintenance (setting, clearing, persistence)
+- Note: BDOS write rejection on R/O disk not yet implemented
 
 ---
 
@@ -480,7 +486,7 @@ All tests follow the standard structure in `tests/programs/`:
 - `tests/programs/tmake.asm` (Phase 12) ✅
 - `tests/programs/trename.asm` (Phase 13) ✅
 - `tests/programs/tdma.asm` (Phase 14) ✅
-- `tests/programs/talloc.asm` (Phase 15, optional)
+- `tests/programs/talloc.asm` (Phase 15) ✅
 
 ## Files to Enhance
 - `tests/programs/tiobyte.asm` (Phases 5, 15) ✅

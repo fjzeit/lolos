@@ -160,6 +160,7 @@ class CpmTester:
             "tmake",
             "trename",
             "tdma",
+            "talloc",
         ]
 
         for prog in test_programs:
@@ -234,6 +235,7 @@ class CpmTester:
             "tmake.com",
             "trename.com",
             "tdma.com",
+            "talloc.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -798,6 +800,22 @@ def test_dma(tester: CpmTester):
     return False, "DMA address tests failed", output
 
 
+def test_alloc(tester: CpmTester):
+    """Test allocation vector and R/O functions (F27, F28, F29)"""
+    # BDOS may print error and wait for keypress on R/O violation
+    # Provide input to dismiss any error prompts
+    success, output = tester.run_cpmsim(["TALLOC"], timeout=20,
+                                         program_input="\r\r\r")
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Allocation/R/O tests passed", output
+
+    return False, "Allocation/R/O tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -857,6 +875,7 @@ def main():
         ("make", lambda: test_make(tester)),
         ("rename", lambda: test_rename(tester)),
         ("dma", lambda: test_dma(tester)),
+        ("alloc", lambda: test_alloc(tester)),
     ]
 
     # Filter tests if specific test requested
