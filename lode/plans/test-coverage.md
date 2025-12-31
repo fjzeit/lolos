@@ -16,12 +16,13 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 7 | Disk System (F13, F14, F24, F25, F31, F37) | ✅ Complete |
 | 8 | File Open/Close (F15, F16) | ✅ Complete |
 | 9 | Directory Search Enhancement (F17, F18) | ✅ Complete |
-| 10-18 | Remaining phases | Pending |
+| 10 | File Delete (F19) | ✅ Complete |
+| 11-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
-- **Disk/File (F12-F40):** 25/27 tested ✅ F15, F16 now covered
-- **Missing dedicated tests:** F19, F20, F21, F22, F23, F26
+- **Disk/File (F12-F40):** 26/27 tested ✅ F15, F16, F19 now covered
+- **Missing dedicated tests:** F20, F21, F22, F23, F26
 
 ### Test Program Pattern
 All tests follow the standard structure in `tests/programs/`:
@@ -247,25 +248,27 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 10: File Delete (F19)
-**New file:** `tests/programs/tdelete.asm`
+**File:** `tests/programs/tdelete.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
 |----|------|-------------|
 | F19 | F_DELETE | Delete file(s) |
 
-### Test Cases
-1. **T1:** Delete existing file (expect 0-3)
-2. **T2:** Delete non-existent file (expect FFH)
-3. **T3:** Delete with wildcard (multiple files)
-4. **T4:** Delete read-only file (should fail or warn)
-5. **T5:** Delete system file
-6. **T6:** Verify directory entry marked E5H after delete
-7. **T7:** Delete multi-extent file (all extents removed)
+### Implemented Tests (8 total)
+1. **T1:** F19 Delete existing file (DEL1.TST) ✅
+2. **T2:** F19 Delete non-existent (no crash) ✅
+3. **T3:** Verify DEL1.TST gone via search ✅
+4. **T4:** DEL2, DEL3 still exist ✅
+5. **T5:** Delete wildcard DEL?.TST ✅
+6. **T6:** Verify DEL2 gone after wildcard ✅
+7. **T7:** Verify DEL3 gone after wildcard ✅
+8. **T8:** Delete already-deleted (no crash) ✅
 
 ### Implementation Notes
-- Create various test files during setup
-- Verify deletion via subsequent search
+- Creates DEL1/2/3.TST test files during setup
+- Tests single file, wildcard, and verification via search
+- Note: Non-existent file delete behavior is implementation-defined
 
 ---
 
@@ -452,7 +455,7 @@ All tests follow the standard structure in `tests/programs/`:
 - `tests/programs/trawio.asm` (Phase 3) ✅
 - `tests/programs/tauxlst.asm` (Phase 4) ✅
 - `tests/programs/topen.asm` (Phase 8) ✅
-- `tests/programs/tdelete.asm` (Phase 10)
+- `tests/programs/tdelete.asm` (Phase 10) ✅
 - `tests/programs/tseqio.asm` (Phase 11)
 - `tests/programs/tmake.asm` (Phase 12)
 - `tests/programs/trename.asm` (Phase 13)

@@ -2,7 +2,7 @@
 
 A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) written in pure Intel 8080 assembly language. Fully bootable operating system targeting z80pack emulator.
 
-**Status**: Fully operational - boots, runs commands, executes .COM files, file I/O including multi-extent files (>16K). All 21 automated tests pass (enhanced search now with 9 subtests).
+**Status**: Fully operational - boots, runs commands, executes .COM files, file I/O including multi-extent files (>16K). All 22 automated tests pass.
 
 ## Design Decisions
 - **CPU**: Intel 8080 (no Z80 extensions, maximum compatibility)
@@ -31,11 +31,11 @@ python3 tools/mkdisk.py
 ```
 
 ## Testing
-**Automated**: `python3 tests/run_tests.py` - runs 21 tests:
+**Automated**: `python3 tests/run_tests.py` - runs 22 tests:
 - Basic operations: boot, dir, type, era, ren, hello, save
 - File I/O: fileio (sequential), bigfile (multi-extent)
 - Console I/O: conch (F1,F2), constr (F9-11), rawio (F6), auxlst (F3-5)
-- BDOS functions: version (F12), disk_mgmt (F13,14,24-29,31,37), search (F17-18), user (F32), random (F33-36,F40), attrib (F30), iobyte (F7,8,28), open (F15,F16)
+- BDOS functions: version (F12), disk_mgmt (F13,14,24-29,31,37), search (F17-18), user (F32), random (F33-36,F40), attrib (F30), iobyte (F7,8,28), open (F15,F16), delete (F19)
 
 Test programs are in `tests/programs/*.asm` (8080 assembly, 8.3 filename format)
 

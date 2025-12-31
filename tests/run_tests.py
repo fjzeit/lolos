@@ -155,6 +155,7 @@ class CpmTester:
             "trawio",
             "tauxlst",
             "topen",
+            "tdelete",
         ]
 
         for prog in test_programs:
@@ -224,6 +225,7 @@ class CpmTester:
             "trawio.com",
             "tauxlst.com",
             "topen.com",
+            "tdelete.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -722,6 +724,19 @@ def test_open(tester: CpmTester):
     return False, "File open/close tests failed", output
 
 
+def test_delete(tester: CpmTester):
+    """Test file delete function (F19)"""
+    success, output = tester.run_cpmsim(["TDELETE"], timeout=15)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "File delete tests passed", output
+
+    return False, "File delete tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -776,6 +791,7 @@ def main():
         ("rawio", lambda: test_rawio(tester)),
         ("auxlst", lambda: test_auxlst(tester)),
         ("open", lambda: test_open(tester)),
+        ("delete", lambda: test_delete(tester)),
     ]
 
     # Filter tests if specific test requested
