@@ -154,6 +154,7 @@ class CpmTester:
             "tconstr",
             "trawio",
             "tauxlst",
+            "topen",
         ]
 
         for prog in test_programs:
@@ -222,6 +223,7 @@ class CpmTester:
             "tconstr.com",
             "trawio.com",
             "tauxlst.com",
+            "topen.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -707,6 +709,19 @@ def test_auxlst(tester: CpmTester):
     return False, "Auxiliary/list device tests failed", output
 
 
+def test_open(tester: CpmTester):
+    """Test file open/close functions (F15, F16)"""
+    success, output = tester.run_cpmsim(["TOPEN"], timeout=15)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "File open/close tests passed", output
+
+    return False, "File open/close tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -760,6 +775,7 @@ def main():
         ("constr", lambda: test_constr(tester)),
         ("rawio", lambda: test_rawio(tester)),
         ("auxlst", lambda: test_auxlst(tester)),
+        ("open", lambda: test_open(tester)),
     ]
 
     # Filter tests if specific test requested

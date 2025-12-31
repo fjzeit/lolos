@@ -14,12 +14,13 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 5 | IOBYTE Enhancement (F7, F8) | ✅ Complete |
 | 6 | Version Enhancement (F12) | ✅ Complete |
 | 7 | Disk System (F13, F14, F24, F25, F31, F37) | ✅ Complete |
-| 8-18 | Remaining phases | Pending |
+| 8 | File Open/Close (F15, F16) | ✅ Complete |
+| 9-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
-- **Disk/File (F12-F40):** 23/27 tested
-- **Missing dedicated tests:** F15, F16, F19, F20, F21, F22, F23, F26
+- **Disk/File (F12-F40):** 25/27 tested ✅ F15, F16 now covered
+- **Missing dedicated tests:** F19, F20, F21, F22, F23, F26
 
 ### Test Program Pattern
 All tests follow the standard structure in `tests/programs/`:
@@ -193,7 +194,7 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 8: File Open/Close (F15, F16)
-**New file:** `tests/programs/topen.asm`
+**File:** `tests/programs/topen.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
@@ -201,19 +202,19 @@ All tests follow the standard structure in `tests/programs/`:
 | F15 | F_OPEN | Open existing file |
 | F16 | F_CLOSE | Close file |
 
-### Test Cases
-1. **T1:** Open existing file (expect 0-3)
-2. **T2:** Open non-existent file (expect FFH)
-3. **T3:** Open with wildcard in name (should find first match)
-4. **T4:** Open read-only file
-5. **T5:** Close valid file
-6. **T6:** Close already-closed file
-7. **T7:** Open multi-extent file (verify correct extent loaded)
-8. **T8:** Verify FCB fields populated on open (RC, allocation map)
+### Implemented Tests (8 total)
+1. **T1:** F15 Open existing file (HELLO.COM) ✅
+2. **T2:** F15 Open non-existent file (expect FFH) ✅
+3. **T3:** F16 Close file after open ✅
+4. **T4:** F15 Verify RC > 0 after open ✅
+5. **T5:** F15 Open with wildcard in extension (HELLO.???) ✅
+6. **T6:** F16 Close without prior open (no crash) ✅
+7. **T7:** F15 Verify EX=0 after open ✅
+8. **T8:** F15 Verify allocation map (D0 non-zero) ✅
 
 ### Implementation Notes
-- Create test files with known properties during setup
-- Verify FCB state after open/close
+- Tests use HELLO.COM which must exist on disk
+- Verifies FCB fields (RC, EX, D0) are properly populated by BDOS
 
 ---
 
@@ -440,11 +441,11 @@ All tests follow the standard structure in `tests/programs/`:
 4. **Enhance remaining tests** (Phases 15-18) - edge cases and completeness
 
 ## Files to Create
-- `tests/programs/tconch.asm` (Phase 1)
-- `tests/programs/tconstr.asm` (Phase 2)
-- `tests/programs/trawio.asm` (Phase 3)
-- `tests/programs/tauxlst.asm` (Phase 4)
-- `tests/programs/topen.asm` (Phase 8)
+- `tests/programs/tconch.asm` (Phase 1) ✅
+- `tests/programs/tconstr.asm` (Phase 2) ✅
+- `tests/programs/trawio.asm` (Phase 3) ✅
+- `tests/programs/tauxlst.asm` (Phase 4) ✅
+- `tests/programs/topen.asm` (Phase 8) ✅
 - `tests/programs/tdelete.asm` (Phase 10)
 - `tests/programs/tseqio.asm` (Phase 11)
 - `tests/programs/tmake.asm` (Phase 12)
