@@ -20,12 +20,13 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 11 | Sequential I/O (F20, F21) | ✅ Complete |
 | 12 | File Create (F22) | ✅ Complete |
 | 13 | File Rename (F23) | ✅ Complete |
-| 14-18 | Remaining phases | Pending |
+| 14 | DMA Address (F26) | ✅ Complete |
+| 15-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
-- **Disk/File (F12-F40):** 26/27 tested ✅ Only F26 (DMA address) lacks dedicated test
-- **Missing dedicated tests:** F26
+- **Disk/File (F12-F40):** 27/27 tested ✅ All disk/file functions covered
+- **All BDOS functions have dedicated tests**
 
 ### Test Program Pattern
 All tests follow the standard structure in `tests/programs/`:
@@ -354,23 +355,26 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 14: DMA Address (F26)
-**New file:** `tests/programs/tdma.asm`
+**File:** `tests/programs/tdma.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
 |----|------|-------------|
 | F26 | F_DMAOFF | Set DMA transfer address |
 
-### Test Cases
-1. **T1:** Set DMA to default 0080H
-2. **T2:** Set DMA to custom address, verify read uses it
-3. **T3:** Set DMA to custom address, verify search uses it
-4. **T4:** DMA at page boundary
-5. **T5:** DMA persistence across operations
+### Implemented Tests (5 total)
+1. **T1:** Set DMA to default 0080H ✅
+2. **T2:** Set DMA to custom address, verify read uses it ✅
+3. **T3:** Set DMA to custom address, verify search uses it ✅
+4. **T4:** DMA at page boundary (256-byte aligned) ✅
+5. **T5:** DMA persistence across multiple operations ✅
 
 ### Implementation Notes
-- Implicitly tested everywhere but needs explicit verification
-- Verify actual data transfer to specified address
+- Tests verify DMA actually directs data to specified address
+- T2 writes pattern to file, reads with DMA pointing to different buffer
+- T3 verifies F17 search places directory entry at DMA address
+- T4 uses page-aligned buffer (ORG alignment trick)
+- T5 confirms DMA setting persists across multiple file reads
 
 ---
 
@@ -475,7 +479,7 @@ All tests follow the standard structure in `tests/programs/`:
 - `tests/programs/tseqio.asm` (Phase 11) ✅
 - `tests/programs/tmake.asm` (Phase 12) ✅
 - `tests/programs/trename.asm` (Phase 13) ✅
-- `tests/programs/tdma.asm` (Phase 14)
+- `tests/programs/tdma.asm` (Phase 14) ✅
 - `tests/programs/talloc.asm` (Phase 15, optional)
 
 ## Files to Enhance

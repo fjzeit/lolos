@@ -159,6 +159,7 @@ class CpmTester:
             "tseqio",
             "tmake",
             "trename",
+            "tdma",
         ]
 
         for prog in test_programs:
@@ -232,6 +233,7 @@ class CpmTester:
             "tseqio.com",
             "tmake.com",
             "trename.com",
+            "tdma.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -783,6 +785,19 @@ def test_rename(tester: CpmTester):
     return False, "File rename tests failed", output
 
 
+def test_dma(tester: CpmTester):
+    """Test DMA address function (F26)"""
+    success, output = tester.run_cpmsim(["TDMA"], timeout=15)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "DMA address tests passed", output
+
+    return False, "DMA address tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -841,6 +856,7 @@ def main():
         ("seqio", lambda: test_seqio(tester)),
         ("make", lambda: test_make(tester)),
         ("rename", lambda: test_rename(tester)),
+        ("dma", lambda: test_dma(tester)),
     ]
 
     # Filter tests if specific test requested
