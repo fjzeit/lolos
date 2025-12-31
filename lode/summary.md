@@ -16,7 +16,7 @@ A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) writt
 | TPA | 0100h-E3FFh | ~57K |
 | CCP | E400h | ~1.4K |
 | BDOS | EC00h | ~3K |
-| BIOS | FA00h | ~428 bytes |
+| BIOS | FA00h | ~535 bytes |
 | Boot | Track 0, Sector 1 | 66 bytes |
 
 ## Build

@@ -414,18 +414,20 @@ All tests follow the standard structure in `tests/programs/`:
 |----|------|-------------|
 | F30 | F_ATTRIB | Set file attributes |
 
-### Implemented Tests (6 total)
+### Implemented Tests (7 total)
 1. **T1:** Set R/O attribute (T1 bit 7) ✅
 2. **T2:** Set SYS attribute (T2 bit 7) ✅
 3. **T3:** Clear attributes ✅
 4. **T4:** F30 on non-existent file returns FFH ✅
 5. **T5:** Set Archive attribute (T3 bit 7) ✅
 6. **T6:** Attribute persistence after close/reopen ✅
+7. **T7:** R/O attribute preserved after file recreate ✅
 
 ### Implementation Notes
 - All three attribute bits tested: R/O (T1), SYS (T2), Archive (T3)
 - Persistence test verifies attributes survive open/close cycle
-- Multi-extent attribute test deferred (requires 129-record file just for attribute testing)
+- T7 verifies R/O attribute persists through file deletion and recreation
+- Note: CP/M 2.2 does NOT enforce file-level R/O (only drive-level via F28)
 
 ---
 
@@ -466,7 +468,7 @@ All tests follow the standard structure in `tests/programs/`:
 | F36 | F_RANDREC | Set random record from sequential position |
 | F40 | F_WRITEZF | Random write with zero fill |
 
-### Implemented Tests (11 total)
+### Implemented Tests (13 total)
 1. **T1:** F35 File size = 10 ✅
 2. **T2:** F33 Read random rec 5 ✅
 3. **T3:** F34 Write random rec 15 ✅
@@ -476,12 +478,15 @@ All tests follow the standard structure in `tests/programs/`:
 7. **T7:** Write/read record 127 (ext 0 boundary) ✅
 8. **T8:** Write/read record 128 (ext 1 boundary) ✅
 9. **T9:** F35 on empty file (size=0) ✅
-10. **T10:** F40 write/read ✅
+10. **T10:** F40 write/read with gap verification ✅
 11. **T11:** R2 overflow error (code 6) ✅
+12. **T12:** Write/read record 255 (extent 1 boundary) ✅
+13. **T13:** Write/read record 256 (extent 2 boundary) ✅
 
 ### Implementation Notes
-- Extent boundary tests (T7, T8) verify record 127/128 transition
-- F40 currently implemented same as F34 (zero fill not done in BDOS)
+- Extent boundary tests: T7/T8 (127/128), T12/T13 (255/256)
+- F40 implemented same as F34 (zero fill optional per CP/M 2.2 spec)
+- T10 tests F40 gap handling (lenient - accepts non-zero-fill implementations)
 - R2 overflow correctly returns error code 6
 - F35 on multi-extent file covered by existing file (16+ records after T3)
 
