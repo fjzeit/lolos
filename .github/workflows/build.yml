@@ -10,7 +10,7 @@ env:
   ZMAC_REPO: https://github.com/gp48k/zmac.git
   ZMAC_VERSION: master
   Z80PACK_REPO: https://github.com/udo-munk/z80pack.git
-  Z80PACK_VERSION: "1.37"
+  Z80PACK_VERSION: master
 
 jobs:
   build-and-test:
@@ -52,14 +52,16 @@ jobs:
         id: cache-z80pack
         with:
           path: ~/z80pack
-          key: z80pack-${{ env.Z80PACK_VERSION }}-${{ runner.os }}
+          key: z80pack-${{ env.Z80PACK_VERSION }}-${{ runner.os }}-v3
 
       - name: Build z80pack
         if: steps.cache-z80pack.outputs.cache-hit != 'true'
         run: |
-          git clone --depth 1 --branch ${{ env.Z80PACK_VERSION }} ${{ env.Z80PACK_REPO }} ~/z80pack
+          git clone --depth 1 ${{ env.Z80PACK_REPO }} ~/z80pack
           cd ~/z80pack/cpmsim/srcsim
-          make -f Makefile.linux
+          make
+          cd ../srctools
+          make
 
       - name: Verify z80pack
         run: ~/z80pack/cpmsim/cpmsim -h || true

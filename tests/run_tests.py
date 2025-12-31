@@ -307,7 +307,7 @@ class CpmTester:
             if IS_WINDOWS:
                 # Windows: use Popen with stdin pipe
                 proc = subprocess.Popen(
-                    [str(CPMSIM_BIN)],
+                    [str(CPMSIM_BIN), "-8"],
                     stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
@@ -327,7 +327,7 @@ class CpmTester:
                 # Linux/Mac: use printf with pipe for reliable EOF handling
                 # Escape special chars for shell
                 escaped = cmd_input.replace("\\", "\\\\").replace("\n", "\\n").replace('"', '\\"')
-                shell_cmd = f'printf "{escaped}" | timeout {timeout} ./cpmsim'
+                shell_cmd = f'printf "{escaped}" | timeout {timeout} ./cpmsim -8'
 
                 result = subprocess.run(
                     shell_cmd,
