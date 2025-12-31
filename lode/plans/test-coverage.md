@@ -11,7 +11,8 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 2 | Console String I/O (F9, F10, F11) | ✅ Complete |
 | 3 | Direct Console I/O (F6) | ✅ Complete |
 | 4 | Auxiliary & List (F3, F4, F5) | ✅ Complete |
-| 5-18 | Remaining phases | Pending |
+| 5 | IOBYTE Enhancement (F7, F8) | ✅ Complete |
+| 6-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
@@ -119,7 +120,7 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 5: IOBYTE Enhancement (F7, F8)
-**Existing file:** `tests/programs/tiobyte.asm`
+**File:** `tests/programs/tiobyte.asm` ✅ Enhanced
 
 ### Functions
 | Fn | Name | Description |
@@ -127,13 +128,15 @@ All tests follow the standard structure in `tests/programs/`:
 | F7 | A_STATIN | Get IOBYTE |
 | F8 | A_STATOUT | Set IOBYTE |
 
-### Current Coverage
-- Basic get/set operations tested
-
-### Additional Test Cases
-1. **T-new1:** Verify all 4 device fields (CON, RDR, PUN, LST)
-2. **T-new2:** Boundary values (00, FF)
-3. **T-new3:** Persistence across BDOS calls
+### Implemented Tests (8 total)
+1. **T1:** F7 Get IOBYTE ✅
+2. **T2:** F8 Set IOBYTE 55H ✅
+3. **T3:** F8 Set IOBYTE AAH ✅
+4. **T4:** F28 Write protect disk ✅
+5. **T5:** Reset clears R/O status ✅
+6. **T6:** Boundary value 00H ✅
+7. **T7:** Boundary value FFH ✅
+8. **T8:** Persistence across BDOS calls ✅
 
 ---
 

@@ -180,11 +180,108 @@ TEST5:
         JNZ     T5FAIL
 
         CALL    TPASS
-        JMP     SUMMARY
+        JMP     TEST6
 
 T5FAIL:
         CALL    TFAIL
         LXI     D, MSGRSTRO
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 6: Boundary value 00H
+        ;---------------------------------------------------------------
+TEST6:
+        MVI     A, 6
+        STA     TESTNUM
+        LXI     D, MSG_T6
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Set IOBYTE to 00H
+        MVI     E, 00H
+        MVI     C, F_SETIOB
+        CALL    BDOS
+
+        ; Get it back
+        MVI     C, F_GETIOB
+        CALL    BDOS
+        CPI     00H
+        JNZ     T6FAIL
+        CALL    TPASS
+        JMP     TEST7
+
+T6FAIL:
+        STA     GOTVAL
+        CALL    TFAIL
+        LXI     D, MSGEXP00
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 7: Boundary value FFH
+        ;---------------------------------------------------------------
+TEST7:
+        MVI     A, 7
+        STA     TESTNUM
+        LXI     D, MSG_T7
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Set IOBYTE to FFH
+        MVI     E, 0FFH
+        MVI     C, F_SETIOB
+        CALL    BDOS
+
+        ; Get it back
+        MVI     C, F_GETIOB
+        CALL    BDOS
+        CPI     0FFH
+        JNZ     T7FAIL
+        CALL    TPASS
+        JMP     TEST8
+
+T7FAIL:
+        STA     GOTVAL
+        CALL    TFAIL
+        LXI     D, MSGEXPFF
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 8: IOBYTE persists across BDOS calls
+        ;---------------------------------------------------------------
+TEST8:
+        MVI     A, 8
+        STA     TESTNUM
+        LXI     D, MSG_T8
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Set IOBYTE to known value
+        MVI     E, 5AH
+        MVI     C, F_SETIOB
+        CALL    BDOS
+
+        ; Do some other BDOS calls
+        MVI     E, 0            ; Select drive A
+        MVI     C, F_SELDSK
+        CALL    BDOS
+        MVI     C, F_ROVEC      ; Get R/O vector
+        CALL    BDOS
+
+        ; Verify IOBYTE unchanged
+        MVI     C, F_GETIOB
+        CALL    BDOS
+        CPI     5AH
+        JNZ     T8FAIL
+        CALL    TPASS
+        JMP     SUMMARY
+
+T8FAIL:
+        STA     GOTVAL
+        CALL    TFAIL
+        LXI     D, MSGEXP5A
         MVI     C, F_PRTSTR
         CALL    BDOS
 
@@ -286,11 +383,17 @@ MSG_T2: DB      'T2: F8 Set IOBYTE 55H... ', '$'
 MSG_T3: DB      'T3: F8 Set IOBYTE AAH... ', '$'
 MSG_T4: DB      'T4: F28 Write protect... ', '$'
 MSG_T5: DB      'T5: Reset clears R/O... ', '$'
+MSG_T6: DB      'T6: IOBYTE 00H... ', '$'
+MSG_T7: DB      'T7: IOBYTE FFH... ', '$'
+MSG_T8: DB      'T8: Persist across calls... ', '$'
 
 MSGOK:  DB      'OK', CR, LF, '$'
 MSGNG:  DB      'NG', CR, LF, '$'
 MSGEXP55: DB    'Expected 55H', CR, LF, '$'
 MSGEXPAA: DB    'Expected AAH', CR, LF, '$'
+MSGEXP00: DB    'Expected 00H', CR, LF, '$'
+MSGEXPFF: DB    'Expected FFH', CR, LF, '$'
+MSGEXP5A: DB    'Expected 5AH', CR, LF, '$'
 MSGWP:  DB      'R/O vector not set', CR, LF, '$'
 MSGRSTRO: DB    'R/O not cleared', CR, LF, '$'
 
