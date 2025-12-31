@@ -1,4 +1,7 @@
-# Assembled binaries
+# Build output
+build/
+
+# Assembled binaries (if not in build/)
 *.cim
 *.lst
 *.hex

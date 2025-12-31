@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CP/M Test Harness for Lolos
+LOLOS Test Harness
 
 Automated testing framework that:
 - Builds the CP/M system
@@ -28,6 +28,7 @@ IS_WINDOWS = platform.system() == "Windows"
 PROJECT_ROOT = Path(__file__).parent.parent
 TOOLS_DIR = PROJECT_ROOT / "tools"
 SRC_DIR = PROJECT_ROOT / "src"
+BUILD_DIR = PROJECT_ROOT / "build"
 
 if IS_WINDOWS:
     # Windows: look for z80pack in common locations
@@ -83,29 +84,26 @@ class CpmTester:
             print(f"  {msg}")
 
     def build(self) -> bool:
-        """Build the CP/M system from source"""
-        print("Building CP/M system...")
+        """Build the LOLOS system from source"""
+        print("Building LOLOS system...")
 
         zmac = TOOLS_DIR / ("zmac.exe" if IS_WINDOWS else "zmac")
         if not zmac.exists():
             print(f"ERROR: zmac not found at {zmac}")
             return False
 
-        # Assemble each component
-        components = [
-            ("boot", "boot"),
-            ("bios", "bios"),
-            ("bdos", "bdos"),
-            ("ccp", "ccp"),
-        ]
+        # Create build directory
+        BUILD_DIR.mkdir(exist_ok=True)
 
-        for subdir, name in components:
-            src_file = SRC_DIR / subdir / f"{name}.asm"
-            out_dir = SRC_DIR / subdir
+        # Assemble each component
+        components = ["boot", "bios", "bdos", "ccp"]
+
+        for name in components:
+            src_file = SRC_DIR / f"{name}.asm"
 
             self.log(f"Assembling {name}...")
             result = subprocess.run(
-                [str(zmac), "-8", "--od", str(out_dir), "--oo", "cim,lst", str(src_file)],
+                [str(zmac), "-8", "--od", str(BUILD_DIR), "--oo", "cim,lst", str(src_file)],
                 capture_output=True,
                 text=True
             )

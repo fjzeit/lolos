@@ -1,9 +1,9 @@
 #!/bin/bash
-# Build script for CP/M (Lolos) - Linux version
+# Build script for LOLOS - Linux version
 
 set -e
 
-echo "Building CP/M..."
+echo "Building LOLOS..."
 echo
 
 # Check for zmac
@@ -21,24 +21,24 @@ else
     ZMAC="zmac"
 fi
 
-# Create output directories
-mkdir -p src/boot src/bios src/bdos src/ccp
+# Create output directory
+mkdir -p build
 
 # Assemble boot loader
 echo "Assembling boot loader..."
-$ZMAC -8 --od src/boot --oo cim,lst src/boot/boot.asm
+$ZMAC -8 --od build --oo cim,lst src/boot.asm
 
 # Assemble BIOS
 echo "Assembling BIOS..."
-$ZMAC -8 --od src/bios --oo cim,lst src/bios/bios.asm
+$ZMAC -8 --od build --oo cim,lst src/bios.asm
 
 # Assemble BDOS
 echo "Assembling BDOS..."
-$ZMAC -8 --od src/bdos --oo cim,lst src/bdos/bdos.asm
+$ZMAC -8 --od build --oo cim,lst src/bdos.asm
 
 # Assemble CCP
 echo "Assembling CCP..."
-$ZMAC -8 --od src/ccp --oo cim,lst src/ccp/ccp.asm
+$ZMAC -8 --od build --oo cim,lst src/ccp.asm
 
 # Create disk image
 echo

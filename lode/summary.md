@@ -21,12 +21,13 @@ A from-scratch recreation of CP/M 2.2 (Control Program for Microcomputers) writt
 
 ## Build
 **Windows**: Run `build.bat`
-**Linux**:
+**Linux**: Run `./build.sh` or manually:
 ```bash
-./tools/zmac -8 --od src/boot --oo cim,lst src/boot/boot.asm
-./tools/zmac -8 --od src/bios --oo cim,lst src/bios/bios.asm
-./tools/zmac -8 --od src/bdos --oo cim,lst src/bdos/bdos.asm
-./tools/zmac -8 --od src/ccp --oo cim,lst src/ccp/ccp.asm
+mkdir -p build
+./tools/zmac -8 --od build --oo cim,lst src/boot.asm
+./tools/zmac -8 --od build --oo cim,lst src/bios.asm
+./tools/zmac -8 --od build --oo cim,lst src/bdos.asm
+./tools/zmac -8 --od build --oo cim,lst src/ccp.asm
 python3 tools/mkdisk.py
 ```
 
@@ -44,12 +45,13 @@ Test programs are in `tests/programs/*.asm` (8080 assembly, 8.3 filename format)
 ## Source Structure
 ```
 src/
-  boot/boot.asm   - Boot loader (66 bytes)
-  bios/bios.asm   - Hardware abstraction
-  bdos/bdos.asm   - System calls
-  ccp/ccp.asm     - Command processor
+  boot.asm   - Boot loader (66 bytes)
+  bios.asm   - Hardware abstraction (CP/M 2.2 compatible interface)
+  bdos.asm   - System calls (CP/M 2.2 compatible API)
+  ccp.asm    - Command processor (CP/M 2.2 compatible commands)
+build/       - Assembled binaries (.cim, .lst)
 tools/
-  zmac            - Assembler (Linux binary)
-  zmac.exe        - Assembler (Windows)
-  mkdisk.py       - Disk image creator
+  zmac       - Assembler (Linux binary)
+  zmac.exe   - Assembler (Windows)
+  mkdisk.py  - Disk image creator
 ```

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Create a bootable CP/M disk image for z80pack.
+Create a bootable LOLOS disk image for z80pack.
 Combines boot loader, CCP, BDOS, and BIOS into an 8" SSSD disk image.
 """
 
@@ -117,19 +117,19 @@ def main():
     if len(sys.argv) < 2:
         # Use default paths
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        boot_file = os.path.join(base_dir, 'src', 'boot', 'boot.cim')
-        ccp_file = os.path.join(base_dir, 'src', 'ccp', 'ccp.cim')
-        bdos_file = os.path.join(base_dir, 'src', 'bdos', 'bdos.cim')
-        bios_file = os.path.join(base_dir, 'src', 'bios', 'bios.cim')
+        boot_file = os.path.join(base_dir, 'build', 'boot.cim')
+        ccp_file = os.path.join(base_dir, 'build', 'ccp.cim')
+        bdos_file = os.path.join(base_dir, 'build', 'bdos.cim')
+        bios_file = os.path.join(base_dir, 'build', 'bios.cim')
         output_file = os.path.join(base_dir, 'drivea.dsk')
     else:
         output_file = sys.argv[1]
-        boot_file = sys.argv[2] if len(sys.argv) > 2 else 'src/boot/boot.cim'
-        ccp_file = sys.argv[3] if len(sys.argv) > 3 else 'src/ccp/ccp.cim'
-        bdos_file = sys.argv[4] if len(sys.argv) > 4 else 'src/bdos/bdos.cim'
-        bios_file = sys.argv[5] if len(sys.argv) > 5 else 'src/bios/bios.cim'
+        boot_file = sys.argv[2] if len(sys.argv) > 2 else 'build/boot.cim'
+        ccp_file = sys.argv[3] if len(sys.argv) > 3 else 'build/ccp.cim'
+        bdos_file = sys.argv[4] if len(sys.argv) > 4 else 'build/bdos.cim'
+        bios_file = sys.argv[5] if len(sys.argv) > 5 else 'build/bios.cim'
 
-    print("Creating CP/M disk image...")
+    print("Creating LOLOS disk image...")
     print()
 
     try:
