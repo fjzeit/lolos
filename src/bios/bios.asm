@@ -70,8 +70,10 @@ WBOOTE: JMP     WBOOT           ; 03 - Warm boot
 ;-------------------------------------------------------------------------------
 
 SIGNON: DB      0DH, 0AH
-        DB      'CP/M 2.2 (Lolos)', 0DH, 0AH
-        DB      '64K TPA', 0DH, 0AH
+        DB      'LOLOS Version 1.00', 0DH, 0AH
+        DB      'Copyright (c) 2025-2026 FJ Zeit. All rights reserved.', 0DH, 0AH
+        DB      'https://github.com/fjzeit/lolos', 0DH, 0AH
+        DB      'CP/M 2.2 Compatible', 0DH, 0AH
         DB      0DH, 0AH, 0
 
 ;-------------------------------------------------------------------------------

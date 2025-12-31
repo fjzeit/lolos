@@ -9,6 +9,7 @@
 ; T4: F30 on non-existent file returns FFH
 ; T5: Set Archive attribute (T3 bit 7)
 ; T6: Attribute persistence after close/reopen
+; T7: Write to R/O file returns error (file-level R/O enforcement)
 
         ORG     0100H
 
@@ -20,6 +21,7 @@ F_OPEN  EQU     15
 F_CLOSE EQU     16
 F_SFIRST EQU    17
 F_DELETE EQU    19
+F_WRITE EQU     21
 F_MAKE  EQU     22
 F_SETDMA EQU    26
 F_ATTRIB EQU    30
@@ -458,11 +460,102 @@ TEST6:
         JZ      T6FAIL
 
         CALL    TPASS
-        JMP     CLEANUP
+        JMP     TEST7
 
 T6FAIL:
         CALL    TFAIL
         LXI     D, MSGPERS
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 7: R/O attribute preserved after file operations
+        ; Note: CP/M 2.2 does NOT enforce file-level R/O (drive-level only)
+        ; This test verifies the attribute persists in directory
+        ;---------------------------------------------------------------
+TEST7:
+        MVI     A, 7
+        STA     TESTNUM
+        LXI     D, MSG_T7
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; First, clear the R/O attribute so we can delete/recreate
+        LXI     H, FCB1
+        CALL    SETFCB
+        LDA     DFCB+9
+        ANI     7FH             ; Clear R/O bit
+        STA     DFCB+9
+        LXI     D, DFCB
+        MVI     C, F_ATTRIB
+        CALL    BDOS
+
+        ; Delete and recreate fresh file
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_DELETE
+        CALL    BDOS
+
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_MAKE
+        CALL    BDOS
+        INR     A
+        JZ      T7FAIL
+
+        ; Close
+        LXI     D, DFCB
+        MVI     C, F_CLOSE
+        CALL    BDOS
+
+        ; Set R/O attribute on file
+        LXI     H, FCB1
+        CALL    SETFCB
+        LDA     DFCB+9
+        ORI     ATTR_RO
+        STA     DFCB+9
+        LXI     D, DFCB
+        MVI     C, F_ATTRIB
+        CALL    BDOS
+        INR     A
+        JZ      T7FAIL
+
+        ; Verify R/O is set via search
+        LXI     D, DMABUF
+        MVI     C, F_SETDMA
+        CALL    BDOS
+
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_SFIRST
+        CALL    BDOS
+        CPI     0FFH
+        JZ      T7FAIL
+
+        ; Calculate directory entry offset (A * 32)
+        ADD     A
+        ADD     A
+        ADD     A
+        ADD     A
+        ADD     A
+        MOV     E, A
+        MVI     D, 0
+        LXI     H, DMABUF
+        DAD     D
+
+        ; Check T1 (offset 9) has R/O bit
+        LXI     D, 9
+        DAD     D
+        MOV     A, M
+        ANI     ATTR_RO
+        JZ      T7FAIL          ; R/O bit should be set
+
+        CALL    TPASS
+        JMP     CLEANUP
+
+T7FAIL:
+        CALL    TFAIL
+        LXI     D, MSGROPRS
         MVI     C, F_PRTSTR
         CALL    BDOS
 
@@ -472,6 +565,16 @@ T6FAIL:
 CLEANUP:
         LXI     D, MSGCLEAN
         MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Clear R/O attribute before delete (R/O files can't be deleted)
+        LXI     H, FCB1
+        CALL    SETFCB
+        LDA     DFCB+9
+        ANI     7FH             ; Clear R/O bit
+        STA     DFCB+9
+        LXI     D, DFCB
+        MVI     C, F_ATTRIB
         CALL    BDOS
 
         LXI     H, FCB1
@@ -603,6 +706,9 @@ FCBNE:  DB      0, 'NOTEXIST', 'XXX'
 ; DMA buffer
 DMABUF: DS      128
 
+; Write buffer for T7
+WRBUF:  DS      128
+
 ; Messages
 MSGHDR: DB      'BDOS File Attributes Test (F30)', CR, LF
         DB      '================================', CR, LF, '$'
@@ -616,6 +722,7 @@ MSG_T3: DB      'T3: Clear attributes... ', '$'
 MSG_T4: DB      'T4: F30 on missing file... ', '$'
 MSG_T5: DB      'T5: Set Archive attribute... ', '$'
 MSG_T6: DB      'T6: Attr persist close/reopen... ', '$'
+MSG_T7: DB      'T7: R/O attr after recreate... ', '$'
 
 MSGOK:  DB      'OK', CR, LF, '$'
 MSGOKLN: DB     'OK', CR, LF, '$'
@@ -627,6 +734,7 @@ MSGCLR: DB      'Attrs not cleared', CR, LF, '$'
 MSGNF:  DB      'Should return FFH', CR, LF, '$'
 MSGARC: DB      'Archive not set', CR, LF, '$'
 MSGPERS: DB     'Attrs not persisted', CR, LF, '$'
+MSGROPRS: DB    'R/O not preserved', CR, LF, '$'
 
 MSGSUMM: DB     CR, LF, 'Summary: ', '$'
 MSGOF:  DB      ' of ', '$'

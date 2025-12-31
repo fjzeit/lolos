@@ -409,7 +409,7 @@ def test_boot(tester: CpmTester):
     if not success:
         return False, output, output
 
-    if "CP/M 2.2 (Lolos)" not in output:
+    if "LOLOS Version" not in output:
         return False, "Boot message not found", output
 
     if "A>" not in output:

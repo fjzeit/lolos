@@ -35,7 +35,7 @@ BIAS    EQU     (MSIZE-20)*1024
 CCP     EQU     3400H+BIAS
 BIOS    EQU     CCP+1600H
 
-NSECTS  EQU     48              ; Sectors to load
+NSECTS  EQU     52              ; Sectors to load (CCP+BDOS+BIOS)
 
 ; z80pack I/O ports (decimal values)
 FDCD    EQU     10              ; FDC drive select

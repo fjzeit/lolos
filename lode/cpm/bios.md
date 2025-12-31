@@ -102,6 +102,16 @@ CONIN:
         RET
 ```
 
+## Boot Loader Dependency
+
+The boot loader (`src/boot/boot.asm`) loads a fixed number of sectors (NSECTS) from disk into memory starting at CCP. If the BIOS grows (e.g., longer signon message), NSECTS must be increased to ensure the entire system is loaded.
+
+**Current values:**
+- NSECTS = 52 sectors × 128 bytes = 6656 bytes
+- System spans E400h to ~FD58h
+
+**Symptom of insufficient NSECTS:** System boots, displays signon, then hangs without showing `A>` prompt (BIOS truncated, jump table broken).
+
 ## Related
 - [memory-map.md](memory-map.md) - System memory layout
 - [filesystem.md](filesystem.md) - Directory and file structures
