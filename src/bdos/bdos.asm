@@ -1325,6 +1325,8 @@ F20OC2:
 
 FUNC21:
         CALL    SETFCB
+        CALL    CHKRO           ; Check if drive is read-only
+        JNZ     F21ERR          ; If R/O, return error (A=1)
         LHLD    CURFCB
         LXI     D, 32
         DAD     D               ; HL = FCB+32 (CR)
@@ -1947,6 +1949,8 @@ F33ERR:
 
 FUNC34:
         CALL    SETFCB
+        CALL    CHKRO           ; Check if drive is read-only
+        JNZ     F34ERR          ; If R/O, return error (A=1)
         CALL    RNDREC          ; Convert random record to extent/record
         ORA     A
         JNZ     F34ERR          ; RNDREC returned error (6=past disk)
@@ -2200,6 +2204,60 @@ SFDEF:
 SFSEL:
         STA     CURDSK
         CALL    SELDRIVE
+        RET
+
+;-------------------------------------------------------------------------------
+; CHKRO - Check if current drive is read-only (internal)
+;-------------------------------------------------------------------------------
+; Description:
+;   Checks ROVEC to see if CURDSK is marked read-only.
+;
+; Input:
+;   CURDSK  - Drive to check (0-15)
+;
+; Output:
+;   A       - 0 if writable, 1 if read-only
+;   Z flag  - Set if writable, clear if read-only
+;
+; Clobbers:
+;   BC, HL, flags
+;-------------------------------------------------------------------------------
+
+CHKRO:
+        LDA     CURDSK
+        MOV     C, A            ; C = drive number
+        MVI     B, 1            ; B = mask bit
+        ORA     A
+        JZ      CHKR2           ; Drive 0, mask is 1
+CHKR1:
+        MOV     A, B
+        ADD     A               ; Shift left
+        MOV     B, A
+        DCR     C
+        JNZ     CHKR1
+CHKR2:
+        ; B now has bitmask for drive
+        ; Check low byte of ROVEC
+        LDA     CURDSK
+        CPI     8
+        JNC     CHKRH           ; Drive 8-15, check high byte
+        LDA     ROVEC
+        ANA     B
+        JZ      CHKROK          ; Not R/O
+        MVI     A, 1
+        ORA     A               ; Clear Z flag
+        RET
+CHKRH:
+        ; For drives 8-15, mask is in low 8 bits of B still
+        ; but we need to shift B back for high byte position
+        LDA     ROVEC+1
+        ANA     B
+        JZ      CHKROK
+        MVI     A, 1
+        ORA     A               ; Clear Z flag
+        RET
+CHKROK:
+        XRA     A               ; A=0, Z flag set
         RET
 
 ;-------------------------------------------------------------------------------

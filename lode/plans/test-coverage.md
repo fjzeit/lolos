@@ -394,13 +394,13 @@ All tests follow the standard structure in `tests/programs/`:
 2. **T2:** ALV has bits set (files exist) ✅
 3. **T3:** File create + write works ✅
 4. **T4:** F28 sets R/O, F29 reflects it ✅
-5. **T5:** R/O status persists across calls ✅
+5. **T5:** Write to R/O drive returns error ✅
 6. **T6:** F13 reset clears R/O status ✅
 
 ### Implementation Notes
 - Creates ALLOC.TST as test file
 - Tests R/O vector maintenance (setting, clearing, persistence)
-- Note: BDOS write rejection on R/O disk not yet implemented
+- BDOS enforces R/O: F21/F34 return error 1 when drive is R/O
 
 ---
 

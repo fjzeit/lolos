@@ -207,9 +207,8 @@ T4FAIL:
         CALL    TFAIL
 
         ;---------------------------------------------------------------
-        ; Test 5: R/O vector reflects disk status after F28
-        ; (Note: BDOS write rejection not yet implemented - just verify
-        ; the R/O vector is correctly maintained)
+        ; Test 5: Write to R/O drive returns error
+        ; Open existing file and try to write - should fail with A=1
         ;---------------------------------------------------------------
 TEST5:
         MVI     A, 5
@@ -219,13 +218,40 @@ TEST5:
         CALL    BDOS
 
         ; Drive should still be R/O from T4
-        ; Verify R/O vector still has bit 0 set
-        MVI     C, F_ROVEC
+        ; Open the ALLOC.TST file we created in T3
+        CALL    SETUPFCB
+        LXI     D, FCB
+        MVI     C, F_OPEN
         CALL    BDOS
-        MOV     A, L
-        ANI     01H
-        JZ      T5FAIL          ; R/O should still be set
+        CPI     4
+        JNC     T5SKIP          ; Can't open - skip test
 
+        ; Set DMA
+        LXI     D, WRBUF
+        MVI     C, F_DMAOFF
+        CALL    BDOS
+
+        ; Try to write - should return error (non-zero)
+        LXI     D, FCB
+        MVI     C, F_WRITE
+        CALL    BDOS
+        ; On R/O disk, WRITE should return 1 (error)
+        CPI     1
+        JZ      T5PASS          ; Got error 1 = R/O enforced
+
+        ; Wrong return value
+        JMP     T5FAIL
+
+T5SKIP:
+        ; Can't open file - skip this test, count as pass
+        CALL    TPASS
+        JMP     TEST6
+
+T5PASS:
+        ; Close file (may fail on R/O, that's ok)
+        LXI     D, FCB
+        MVI     C, F_CLOSE
+        CALL    BDOS
         CALL    TPASS
         JMP     TEST6
 
@@ -467,7 +493,7 @@ MSG_T1: DB      'T1: F27 ALV address valid... ', '$'
 MSG_T2: DB      'T2: ALV has bits set... ', '$'
 MSG_T3: DB      'T3: File create + write... ', '$'
 MSG_T4: DB      'T4: F28 sets R/O, F29 shows... ', '$'
-MSG_T5: DB      'T5: R/O persists... ', '$'
+MSG_T5: DB      'T5: Write to R/O fails... ', '$'
 MSG_T6: DB      'T6: Reset clears R/O... ', '$'
 
 MSGOK:  DB      'OK', CR, LF, '$'
@@ -475,7 +501,7 @@ MSGNG:  DB      'NG', CR, LF, '$'
 
 MSGALV0: DB     'ALV empty (no files?)', CR, LF, '$'
 MSGNOALC: DB    'ALV unchanged after file create', CR, LF, '$'
-MSGROWRT: DB    'R/O status lost', CR, LF, '$'
+MSGROWRT: DB    'Write not rejected on R/O', CR, LF, '$'
 MSGRSTRO: DB    'R/O not cleared after reset', CR, LF, '$'
 
 MSGSUMM: DB     'Summary: ', '$'

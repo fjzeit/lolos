@@ -66,9 +66,12 @@ The BDOS provides system calls accessed via `CALL 0005h` with:
 | Code | Meaning | Functions |
 |------|---------|-----------|
 | 0 | Success | F20, F21, F33, F34, F40 |
-| 1 | Unwritten record or I/O error | F20, F21, F33 |
+| 1 | Read-only disk, unwritten record, or I/O error | F20, F21, F33, F34, F40 |
 | 2 | Disk full (no free blocks) | F21, F34, F40 |
 | 6 | Seek past end of disk (R2 > 0) | F33, F34, F40 |
+
+### R/O Enforcement
+Write functions (F21, F34, F40) check ROVEC before writing. If the drive bit is set, they return error code 1 without attempting the write. The CHKRO helper routine performs this check.
 
 ## Implementation Notes
 
