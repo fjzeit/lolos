@@ -16,3 +16,4 @@
 ## Plans
 - [plans/roadmap.md](plans/roadmap.md) - Implementation phases
 - [plans/handover.md](plans/handover.md) - Session handover for Linux testing
+- [plans/test-coverage.md](plans/test-coverage.md) - BDOS test coverage enhancement (18 phases)
