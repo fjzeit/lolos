@@ -157,6 +157,7 @@ class CpmTester:
             "topen",
             "tdelete",
             "tseqio",
+            "tmake",
         ]
 
         for prog in test_programs:
@@ -228,6 +229,7 @@ class CpmTester:
             "topen.com",
             "tdelete.com",
             "tseqio.com",
+            "tmake.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -753,6 +755,19 @@ def test_seqio(tester: CpmTester):
     return False, "Sequential I/O tests failed", output
 
 
+def test_make(tester: CpmTester):
+    """Test file create function (F22)"""
+    success, output = tester.run_cpmsim(["TMAKE"], timeout=15)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "File create tests passed", output
+
+    return False, "File create tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -809,6 +824,7 @@ def main():
         ("open", lambda: test_open(tester)),
         ("delete", lambda: test_delete(tester)),
         ("seqio", lambda: test_seqio(tester)),
+        ("make", lambda: test_make(tester)),
     ]
 
     # Filter tests if specific test requested
