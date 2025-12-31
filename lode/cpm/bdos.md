@@ -138,6 +138,31 @@ F15LP:  CALL    SEARCH          ; Find filename match
 4. Clear allocation map (16 bytes)
 5. Create new directory entry (F21MKE) for the new extent
 
+### Random Access (F33, F34)
+
+Random read/write uses RNDREC to convert the 24-bit random record number (FCB+33,34,35) to extent and CR:
+
+1. **CR (Current Record)** = R0 AND 7Fh (low 7 bits)
+2. **Extent** = (R1:R0) / 128 (bits 11:7)
+
+RNDREC sets FCB+12 (extent) and FCB+32 (CR), then the caller:
+- **FUNC33** loads CR and calls READREC
+- **FUNC34** loads CR and calls WRITEREC
+
+**Important**: After calling RNDREC, the record number is in FCB+32, NOT in A. READREC/WRITEREC expect the record in A:
+```
+LHLD    CURFCB
+LXI     D, 32
+DAD     D
+MOV     A, M            ; A = CR from FCB+32
+CALL    READREC         ; or WRITEREC
+```
+
+### Known Limitations
+
+- Random write beyond current file size (e.g., writing to record 15 when file has 10 records) may fail if the required block is not yet in the FCB allocation map
+- This is a TODO for future improvement - need to re-open the extent or create a new one as needed
+
 ## Related
 - [filesystem.md](filesystem.md) - FCB structure and directory format
 - [bios.md](bios.md) - Low-level I/O calls

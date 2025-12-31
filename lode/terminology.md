@@ -22,3 +22,4 @@
 - **E5h** - Magic byte marking deleted/free directory entries
 - **8" SSSD** - 8-inch Single-Sided Single-Density, IBM 3740 format
 - **zmac** - Z80/8080 macro assembler; use `-8` flag for 8080-only mode
+- **8.3 filename** - CP/M filename format: 8 chars max + 3 char extension (e.g., HELLO.COM). All uppercase, space-padded internally

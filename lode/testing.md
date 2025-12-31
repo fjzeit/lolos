@@ -49,37 +49,50 @@ flowchart TD
 4. **Execute**: Pipes commands to cpmsim via stdin
 5. **Verify**: Checks output for expected patterns
 
-### Current Tests
+### Current Tests (16 total)
 
-| Test | Description | What it verifies |
-|------|-------------|------------------|
-| boot | System boots | Boot message, prompt appears |
-| dir | DIR command | File listing works |
-| type | TYPE command | File contents displayed |
-| era | ERA command | File deletion works |
-| ren | REN command | File renaming works |
-| hello | Program execution | hello.com runs correctly |
-| save | SAVE command | Save memory to file, verify it runs |
-| fileio | File I/O operations | Create, write, close, open, read, verify data |
-| bigfile | Multi-extent file | Write 200 records (25K spanning 2 extents), read back, verify |
+| Test | Program | Description | BDOS Functions Tested |
+|------|---------|-------------|----------------------|
+| boot | - | System boots | - |
+| dir | - | DIR command | F17, F18 |
+| type | - | TYPE command | F15, F20 |
+| era | - | ERA command | F19 |
+| ren | - | REN command | F23 |
+| hello | - | Program execution | F9 |
+| save | - | SAVE command | F22, F21 |
+| fileio | fileio.asm | Sequential file I/O | F22, F21, F16, F15, F20 |
+| bigfile | bigfile.asm | Multi-extent file | F22, F21, F16, F15, F20 (extent spanning) |
+| version | tversion.asm | Version check | F12 |
+| disk_mgmt | tdisk.asm | Disk management | F13, F14, F24, F25, F27, F29, F31, F37 |
+| search | tsearch.asm | Directory search | F17, F18 |
+| user | tuser.asm | User number | F32 |
+| random | trandom.asm | Random access | F33, F34, F35, F36 |
+| attrib | tattrib.asm | File attributes | F30 |
+| iobyte | tiobyte.asm | IOBYTE and write protect | F7, F8, F28 |
 
-### Test Programs
+**Status**: 15/16 tests pass. Random access test has 4/6 subtests passing (read random, file size, set random from seq work; write random beyond file size is a known limitation)
 
-`tests/programs/fileio.asm` - Single-extent file I/O test:
-1. Creates a file using MAKE
-2. Writes a 128-byte pattern using WRITE
-3. Closes and reopens the file
-4. Reads the data back
-5. Verifies the data matches
+### Test Programs (tests/programs/*.asm)
 
-`tests/programs/bigfile.asm` - Multi-extent file test:
-1. Creates BIGTEST.TMP
-2. Writes 200 records (25K, spans 2 extents at 128 records each)
-3. Each record filled with its record number (0-199)
-4. Closes and reopens file
-5. Reads all 200 records sequentially
-6. Verifies each record's data matches expected pattern
-7. Tests extent transition at record 128 (crossing from extent 0 to extent 1)
+**Important**: Filenames must follow CP/M 8.3 format (8 chars max + 3 char extension). Use prefixes like `t` instead of `test_`.
+
+| File | Description |
+|------|-------------|
+| fileio.asm | Sequential file I/O - create, write, close, reopen, read, verify |
+| bigfile.asm | Multi-extent file - 200 records spanning 2 extents |
+| tversion.asm | Version check - verifies F12 returns 0022H |
+| tdisk.asm | Disk management functions |
+| tsearch.asm | Directory search with wildcards |
+| tuser.asm | User number get/set |
+| trandom.asm | Random access read/write/size/setrandom |
+| tattrib.asm | File attributes (read-only, system, archive) |
+| tiobyte.asm | IOBYTE and write protect operations |
+
+All test programs follow the same pattern:
+1. Print test header
+2. Run numbered test cases (T1, T2, etc.)
+3. Print OK/NG for each test
+4. Print summary: "X of Y tests" then PASS/FAIL
 
 ### Cross-Platform Support
 

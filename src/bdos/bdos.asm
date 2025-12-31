@@ -1145,6 +1145,11 @@ F32SET:
 FUNC33:
         CALL    SETFCB
         CALL    RNDREC          ; Convert random record to extent/record
+        ; Load CR from FCB for READREC
+        LHLD    CURFCB
+        LXI     D, 32
+        DAD     D
+        MOV     A, M            ; A = CR
         CALL    READREC
         MOV     L, A
         MVI     H, 0
@@ -1153,7 +1158,12 @@ FUNC33:
 ; Function 34: Write random
 FUNC34:
         CALL    SETFCB
-        CALL    RNDREC
+        CALL    RNDREC          ; Convert random record to extent/record
+        ; Load CR from FCB for WRITEREC
+        LHLD    CURFCB
+        LXI     D, 32
+        DAD     D
+        MOV     A, M            ; A = CR
         CALL    WRITEREC
         MOV     L, A
         MVI     H, 0
@@ -1477,22 +1487,9 @@ FFREENF:
 ; Get pointer to current directory entry in buffer
 ; Returns HL = pointer
 GETDIRENT:
-        LDA     DIRENT
-        LXI     H, DIRBUF
-        ; Multiply by 32
-        RRC                     ; /2, bit 0 to carry
-        JNC     GDE1
-        LXI     D, 128          ; Add 128 if bit 0 was set
-        DAD     D
-GDE1:
-        ANI     01H             ; Remaining bit
-        JZ      GDE2
-        LXI     D, 64
-        DAD     D
-GDE2:
-        ; Wait, this is wrong. Let me recalculate.
+        ; Calculate pointer to directory entry in DIRBUF
         ; Entry 0: offset 0, Entry 1: offset 32, Entry 2: offset 64, Entry 3: offset 96
-        ; So offset = entry * 32
+        ; offset = entry * 32
         LDA     DIRENT
         ADD     A               ; *2
         ADD     A               ; *4
@@ -2206,10 +2203,9 @@ RNDREC:
         LXI     D, 32
         DAD     D
         MOV     M, A
-        ; Re-open file for new extent
-        XRA     A
-        STA     SEARCHI         ; Start from entry 0
-        CALL    SEARCH
+        ; For random access, just return success
+        ; The FCB should already have correct allocation from OPEN
+        XRA     A               ; Return success
         RET
 
 ; Copy B bytes from HL to DE

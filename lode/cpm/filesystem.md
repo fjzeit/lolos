@@ -66,6 +66,22 @@ Physical sectors are interleaved for performance. Standard 8" skew:
 | CR | Current record (sequential I/O) |
 | R0-R2 | Random record number (24-bit) |
 
+## Filename Format (8.3)
+
+**Critical constraint**: CP/M filenames follow strict 8.3 format:
+- **Filename**: 1-8 uppercase characters (A-Z, 0-9)
+- **Extension**: 0-3 uppercase characters
+- Separated by `.` when displayed, stored space-padded
+
+Examples:
+| Display | Stored (11 bytes) |
+|---------|-------------------|
+| HELLO.COM | `HELLO   COM` |
+| A.TXT | `A       TXT` |
+| README | `README   ` |
+
+**Tools handling**: When using `cpmcp` to copy files to a disk image, host filenames longer than 8.3 will be truncated, potentially without the extension. Always use proper 8.3 names for CP/M files.
+
 ## Wildcards
 
 - `?` matches any single character

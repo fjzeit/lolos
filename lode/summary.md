@@ -31,7 +31,12 @@ python3 tools/mkdisk.py
 ```
 
 ## Testing
-**Automated**: `python3 tests/run_tests.py` - runs 9 tests covering boot, commands, file I/O, and multi-extent files
+**Automated**: `python3 tests/run_tests.py` - runs 16 tests:
+- Basic operations: boot, dir, type, era, ren, hello, save
+- File I/O: fileio (sequential), bigfile (multi-extent)
+- BDOS functions: version (F12), disk_mgmt (F13,14,24-29,31,37), search (F17-18), user (F32), random (F33-36,F40), attrib (F30), iobyte (F7,8,28)
+
+Test programs are in `tests/programs/*.asm` (8080 assembly, 8.3 filename format)
 
 **Manual**: Copy `drivea.dsk` to z80pack's `cpmsim/disks/` directory and run `./cpmsim`.
 

@@ -127,7 +127,55 @@ class CpmTester:
             print(result.stderr)
             return False
 
+        # Build test programs
+        if not self.build_test_programs():
+            return False
+
         print("Build complete.")
+        return True
+
+    def build_test_programs(self) -> bool:
+        """Build all test programs in tests/programs/"""
+        test_programs_dir = PROJECT_ROOT / "tests" / "programs"
+        zmac = TOOLS_DIR / ("zmac.exe" if IS_WINDOWS else "zmac")
+
+        # List of test programs to build
+        test_programs = [
+            "fileio",
+            "bigfile",
+            "tversion",
+            "tdisk",
+            "tsearch",
+            "tuser",
+            "trandom",
+            "tattrib",
+            "tiobyte",
+        ]
+
+        for prog in test_programs:
+            src_file = test_programs_dir / f"{prog}.asm"
+            if not src_file.exists():
+                continue
+
+            self.log(f"Assembling {prog}...")
+            result = subprocess.run(
+                [str(zmac), "-8", "--od", str(test_programs_dir), "--oo", "cim,lst", str(src_file)],
+                capture_output=True,
+                text=True
+            )
+            if result.returncode != 0:
+                print(f"ERROR: Failed to assemble {prog}")
+                print(result.stderr)
+                return False
+
+            # Rename .cim to .com
+            cim_file = test_programs_dir / f"{prog}.cim"
+            com_file = test_programs_dir / f"{prog}.com"
+            if cim_file.exists():
+                if com_file.exists():
+                    com_file.unlink()
+                cim_file.rename(com_file)
+
         return True
 
     def deploy_disk(self) -> bool:
@@ -156,6 +204,21 @@ class CpmTester:
         bigfile_com = PROJECT_ROOT / "tests" / "programs" / "bigfile.com"
         if bigfile_com.exists():
             self.add_file_to_disk(bigfile_com, "BIGFILE.COM")
+
+        # Add new BDOS unit test programs
+        unit_tests = [
+            "tversion.com",
+            "tdisk.com",
+            "tsearch.com",
+            "tuser.com",
+            "trandom.com",
+            "tattrib.com",
+            "tiobyte.com",
+        ]
+        for test_name in unit_tests:
+            test_path = PROJECT_ROOT / "tests" / "programs" / test_name
+            if test_path.exists():
+                self.add_file_to_disk(test_path, test_name.upper())
 
         return True
 
@@ -474,6 +537,97 @@ def test_bigfile(tester: CpmTester):
     return False, "Unexpected output from BIGFILE", output
 
 
+def test_version(tester: CpmTester):
+    """Test BDOS function 12 - Version number"""
+    success, output = tester.run_cpmsim(["TVERSION"], timeout=10)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Version test passed", output
+
+    return False, "Version test failed", output
+
+
+def test_disk_mgmt(tester: CpmTester):
+    """Test disk management functions (F13,14,24,25,27,29,31,37)"""
+    success, output = tester.run_cpmsim(["TDISK"], timeout=15)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Disk management tests passed", output
+
+    return False, "Disk management tests failed", output
+
+
+def test_search(tester: CpmTester):
+    """Test search functions (F17, F18)"""
+    success, output = tester.run_cpmsim(["TSEARCH"], timeout=15)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Search tests passed", output
+
+    return False, "Search tests failed", output
+
+
+def test_user(tester: CpmTester):
+    """Test user number function (F32)"""
+    success, output = tester.run_cpmsim(["TUSER"], timeout=10)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "User number tests passed", output
+
+    return False, "User number tests failed", output
+
+
+def test_random(tester: CpmTester):
+    """Test random access functions (F33-36, F40)"""
+    success, output = tester.run_cpmsim(["TRANDOM"], timeout=30)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Random access tests passed", output
+
+    return False, "Random access tests failed", output
+
+
+def test_attrib(tester: CpmTester):
+    """Test file attributes function (F30)"""
+    success, output = tester.run_cpmsim(["TATTRIB"], timeout=15)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "File attributes tests passed", output
+
+    return False, "File attributes tests failed", output
+
+
+def test_iobyte(tester: CpmTester):
+    """Test IOBYTE and write protect (F7, F8, F28)"""
+    success, output = tester.run_cpmsim(["TIOBYTE"], timeout=10)
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "IOBYTE tests passed", output
+
+    return False, "IOBYTE tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -515,6 +669,14 @@ def main():
         ("save", lambda: test_save_command(tester)),
         ("fileio", lambda: test_fileio(tester)),
         ("bigfile", lambda: test_bigfile(tester)),
+        # BDOS unit tests
+        ("version", lambda: test_version(tester)),
+        ("disk_mgmt", lambda: test_disk_mgmt(tester)),
+        ("search", lambda: test_search(tester)),
+        ("user", lambda: test_user(tester)),
+        ("random", lambda: test_random(tester)),
+        ("attrib", lambda: test_attrib(tester)),
+        ("iobyte", lambda: test_iobyte(tester)),
     ]
 
     # Filter tests if specific test requested
