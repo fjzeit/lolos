@@ -182,6 +182,41 @@ MOV     A, M            ; A = CR from FCB+32
 CALL    READREC         ; or WRITEREC
 ```
 
+## Internal Helper Routines
+
+### SETLA
+Sets A in L, clears H, and returns via SETRET. Reduces code size for functions returning a single byte value.
+```asm
+SETLA:  MOV     L, A
+        MVI     H, 0
+        ; falls through to SETRET
+```
+
+### BITMASK
+Creates a bit mask for a drive number (1 << drive). Used by SELDRIVE, FUNC28, and CHKRO.
+```asm
+; Input: A = drive (0-15)
+; Output: B = mask (1 << drive)
+BITMASK:
+        MOV     C, A
+        MVI     B, 1
+        ORA     A
+        RZ              ; Drive 0, mask is already 1
+BMLP:   MOV     A, B
+        ADD     A       ; Shift left
+        MOV     B, A
+        DCR     C
+        JNZ     BMLP
+        RET
+```
+
+### BITPREP
+Calculates ALV byte address and bit position for block allocation operations. Used by GETBIT and SETBIT.
+```asm
+; Input: HL = block number
+; Output: HL = ALV byte address, B = bit position (0-7)
+```
+
 ## Related
 - [filesystem.md](filesystem.md) - FCB structure and directory format
 - [bios.md](bios.md) - Low-level I/O calls

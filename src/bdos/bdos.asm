@@ -106,6 +106,12 @@ BFRET:
         MOV     B, H            ; And B for some functions
         RET
 
+; Set A in L, clear H, and return
+SETLA:
+        MOV     L, A
+        MVI     H, 0
+        ; falls through to SETRET
+
 ; Set return value and exit
 SETRET:
         SHLD    RETS
@@ -221,9 +227,7 @@ F01EC:
         CALL    CONOUTW         ; Echo CR, LF, TAB
 F01DN:
         POP     PSW
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC02 - Console output (BDOS Function 2)
@@ -268,9 +272,7 @@ FUNC02:
 
 FUNC03:
         CALL    BREADER
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC04 - Auxiliary output (BDOS Function 4)
@@ -355,22 +357,16 @@ FUNC06:
         JMP     BFRET
 F06ST:
         CALL    BCONST          ; Status
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 F06IW:
         CALL    BCONIN          ; Input, wait
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 F06IN:
         CALL    BCONST          ; Check status
         ORA     A
         JZ      BFRET           ; Return 0 if not ready
         CALL    BCONIN          ; Get character
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC07 - Get I/O byte (BDOS Function 7)
@@ -393,9 +389,7 @@ F06IN:
 
 FUNC07:
         LDA     IOBYTE
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC08 - Set I/O byte (BDOS Function 8)
@@ -640,9 +634,7 @@ F10DN:
 
 FUNC11:
         CALL    CONSTAT
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC12 - Return version number (BDOS Function 12)
@@ -875,18 +867,7 @@ SELDRIVE:
         SHLD    CURDPH          ; Save DPH
         ; Mark drive as logged in
         LDA     CDISK
-        MOV     C, A
-        MVI     B, 1
-SELD1:
-        MOV     A, C
-        ORA     A
-        JZ      SELD2
-        MOV     A, B
-        RLC
-        MOV     B, A
-        DCR     C
-        JMP     SELD1
-SELD2:
+        CALL    BITMASK         ; B = mask for drive
         ; Check if already logged in
         LDA     LOGINV
         ANA     B
@@ -972,9 +953,8 @@ F15LP:
         MVI     L, 0            ; Return directory code
         JMP     SETRET
 F15NF:
-        MVI     L, 0FFH
-        MVI     H, 0
-        JMP     SETRET
+        MVI     A, 0FFH
+        JMP     SETLA
 
 OPENEXT: DS     1               ; Requested extent for OPEN
 CLOSEXT: DS     1               ; Extent for CLOSE
@@ -1044,9 +1024,8 @@ F16LP:
         MVI     L, 0
         JMP     SETRET
 F16NF:
-        MVI     L, 0FFH
-        MVI     H, 0
-        JMP     SETRET
+        MVI     A, 0FFH
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC17 - Search for first (BDOS Function 17)
@@ -1116,13 +1095,10 @@ FUNC18:
         MVI     B, 128
         CALL    COPYB
         POP     PSW
-        MOV     L, A            ; Return directory code (0-3)
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA           ; Return directory code (0-3)
 F18NF:
-        MVI     L, 0FFH
-        MVI     H, 0
-        JMP     SETRET
+        MVI     A, 0FFH
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC19 - Delete file (BDOS Function 19)
@@ -1219,13 +1195,11 @@ F20OK:
         MVI     L, 0
         JMP     SETRET
 F20ERR:
-        MVI     L, 1
-        MVI     H, 0
-        JMP     SETRET
+        MVI     A, 1
+        JMP     SETLA
 F20EOF:
-        MVI     L, 1            ; Return 1 = EOF
-        MVI     H, 0
-        JMP     SETRET
+        MVI     A, 1            ; Return 1 = EOF
+        JMP     SETLA
 
 ; F20OPN - Open next extent for reading
 ; Searches directory for matching filename and extent, loads allocation map
@@ -1377,9 +1351,7 @@ F21OK:
         MVI     L, 0
         JMP     SETRET
 F21ERR:
-        MOV     L, A            ; Pass through error code (1=error, 2=disk full)
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA           ; Pass through error code (1=error, 2=disk full)
 
 ; Close current extent (internal helper for extent overflow)
 F21CLS:
@@ -1532,9 +1504,8 @@ F22CLR:
         MVI     L, 0
         JMP     SETRET
 F22ERR:
-        MVI     L, 0FFH
-        MVI     H, 0
-        JMP     SETRET
+        MVI     A, 0FFH
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC23 - Rename file (BDOS Function 23)
@@ -1627,9 +1598,7 @@ FUNC24:
 
 FUNC25:
         LDA     CDISK
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC26 - Set DMA address (BDOS Function 26)
@@ -1717,18 +1686,7 @@ FUNC27:
 
 FUNC28:
         LDA     CDISK
-        MOV     C, A
-        MVI     B, 1
-F28LP:
-        MOV     A, C
-        ORA     A
-        JZ      F28DN
-        MOV     A, B
-        RLC
-        MOV     B, A
-        DCR     C
-        JMP     F28LP
-F28DN:
+        CALL    BITMASK         ; B = mask for drive
         LDA     ROVEC
         ORA     B
         STA     ROVEC
@@ -1804,9 +1762,8 @@ FUNC30:
         MVI     L, 0
         JMP     SETRET
 F30NF:
-        MVI     L, 0FFH
-        MVI     H, 0
-        JMP     SETRET
+        MVI     A, 0FFH
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC31 - Get DPB address (BDOS Function 31)
@@ -1869,9 +1826,7 @@ FUNC32:
         CPI     0FFH            ; Get user?
         JNZ     F32SET
         LDA     USERNO
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 F32SET:
         ANI     0FH             ; Mask to 0-15
         STA     USERNO
@@ -1916,9 +1871,7 @@ FUNC33:
         MOV     A, M            ; A = CR
         CALL    READREC
 F33ERR:
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC34 - Write random (BDOS Function 34)
@@ -1961,9 +1914,7 @@ FUNC34:
         MOV     A, M            ; A = CR
         CALL    WRITEREC        ; Returns 0=success, 2=disk full
 F34ERR:
-        MOV     L, A
-        MVI     H, 0
-        JMP     SETRET
+        JMP     SETLA
 
 ;-------------------------------------------------------------------------------
 ; FUNC35 - Compute file size (BDOS Function 35)
@@ -2225,39 +2176,21 @@ SFSEL:
 
 CHKRO:
         LDA     CURDSK
-        MOV     C, A            ; C = drive number
-        MVI     B, 1            ; B = mask bit
-        ORA     A
-        JZ      CHKR2           ; Drive 0, mask is 1
-CHKR1:
-        MOV     A, B
-        ADD     A               ; Shift left
-        MOV     B, A
-        DCR     C
-        JNZ     CHKR1
-CHKR2:
-        ; B now has bitmask for drive
-        ; Check low byte of ROVEC
+        CALL    BITMASK         ; B = mask for drive
+        ; Check appropriate byte of ROVEC based on drive number
         LDA     CURDSK
         CPI     8
         JNC     CHKRH           ; Drive 8-15, check high byte
         LDA     ROVEC
         ANA     B
-        JZ      CHKROK          ; Not R/O
+        RZ                      ; Z=writable
         MVI     A, 1
-        ORA     A               ; Clear Z flag
         RET
 CHKRH:
-        ; For drives 8-15, mask is in low 8 bits of B still
-        ; but we need to shift B back for high byte position
         LDA     ROVEC+1
         ANA     B
-        JZ      CHKROK
+        RZ                      ; Z=writable
         MVI     A, 1
-        ORA     A               ; Clear Z flag
-        RET
-CHKROK:
-        XRA     A               ; A=0, Z flag set
         RET
 
 ;-------------------------------------------------------------------------------
@@ -3024,13 +2957,28 @@ IALNXT:
 IALDON:
         RET
 
-; GETBIT - Test bit for block HL in allocation vector
-; Input: HL=block, ALVPTR  Output: Z=free(0), NZ=used(1)  Clobbers: A,BC,DE
-GETBIT:
-        ; Byte = block / 8, bit = block mod 8
+; BITMASK - Create bit mask for drive number (internal)
+; Input: A = drive (0-15)
+; Output: B = mask (1 << drive)
+; Clobbers: C
+BITMASK:
+        MOV     C, A
+        MVI     B, 1
+        ORA     A
+        RZ                      ; Drive 0, mask is already 1
+BMLP:   MOV     A, B
+        ADD     A               ; Shift left
+        MOV     B, A
+        DCR     C
+        JNZ     BMLP
+        RET
+
+; BITPREP - Calculate ALV byte address and bit position (internal)
+; Input: HL=block  Output: HL=ALV byte addr, B=bit position  Clobbers: A,C,DE
+BITPREP:
         MOV     A, L
         ANI     07H
-        MOV     B, A            ; B = bit position
+        MOV     B, A            ; B = bit position (0-7)
         MOV     A, L
         RRC
         RRC
@@ -3047,9 +2995,14 @@ GETBIT:
         MOV     E, A
         MVI     D, 0            ; DE = byte offset
         LHLD    ALVPTR
-        DAD     D
+        DAD     D               ; HL = byte address
+        RET
+
+; GETBIT - Test bit for block HL in allocation vector
+; Input: HL=block, ALVPTR  Output: Z=free(0), NZ=used(1)  Clobbers: A,BC,DE
+GETBIT:
+        CALL    BITPREP
         MOV     A, M            ; Get byte
-        ; Test bit B
         MVI     C, 80H          ; Start with bit 7
 GBITLP:
         MOV     D, A
@@ -3070,26 +3023,7 @@ GBITDN:
 ; SETBIT - Set bit for block HL in allocation vector (mark used)
 ; Input: HL=block, ALVPTR  Output: (ALV updated)  Clobbers: A,BC,DE
 SETBIT:
-        MOV     A, L
-        ANI     07H
-        MOV     B, A
-        MOV     A, L
-        RRC
-        RRC
-        RRC
-        ANI     1FH
-        MOV     E, A
-        MOV     A, H
-        RLC
-        RLC
-        RLC
-        RLC
-        RLC
-        ORA     E
-        MOV     E, A
-        MVI     D, 0
-        LHLD    ALVPTR
-        DAD     D
+        CALL    BITPREP
         PUSH    H
         MOV     A, M
         MVI     C, 80H
