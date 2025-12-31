@@ -393,7 +393,7 @@ T5FAIL:
         CALL    BDOS
 
         ;---------------------------------------------------------------
-        ; Test 6: Read unwritten record (between 10-14) should fail
+        ; Test 6: Read truly unallocated block should fail
         ;---------------------------------------------------------------
 TEST6:
         MVI     A, 6
@@ -410,8 +410,8 @@ TEST6:
         INR     A
         JZ      T6FAIL2
 
-        ; Set record to 12 (unwritten)
-        MVI     A, 12
+        ; Set record to 100 (block 12, truly unallocated)
+        MVI     A, 100
         STA     DFCB+33
         XRA     A
         STA     DFCB+34
@@ -425,17 +425,198 @@ TEST6:
         ORA     A
         JZ      T6FAIL
         CALL    TPASS
-        JMP     CLEANUP
+        JMP     TEST7
 
 T6FAIL:
         CALL    TFAIL
         LXI     D, MSGUNWR
         MVI     C, F_PRTSTR
         CALL    BDOS
-        JMP     CLEANUP
+        JMP     TEST7
 T6FAIL2:
         CALL    TFAIL
         LXI     D, MSGOPEN
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 7: Extent boundary - write/read record 127 (extent 0)
+        ; This is the LAST record of extent 0 (CR=127)
+        ;---------------------------------------------------------------
+TEST7:
+        MVI     A, 7
+        STA     TESTNUM
+        LXI     D, MSG_T7
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Open
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_OPEN
+        CALL    BDOS
+        INR     A
+        JZ      T7FAIL
+
+        ; Set record to 127 (extent=0, CR=127)
+        MVI     A, 127
+        STA     DFCB+33
+        XRA     A
+        STA     DFCB+34
+        STA     DFCB+35
+
+        ; Fill buffer with 0x7F (127)
+        LXI     H, BUFFER
+        MVI     B, 128
+        MVI     A, 07FH
+T7FILL:
+        MOV     M, A
+        INX     H
+        DCR     B
+        JNZ     T7FILL
+
+        ; Write random
+        LXI     D, DFCB
+        MVI     C, F_WRITERAND
+        CALL    BDOS
+        ORA     A
+        JNZ     T7FAIL
+
+        ; Close to save
+        LXI     D, DFCB
+        MVI     C, F_CLOSE
+        CALL    BDOS
+
+        ; Reopen and read back
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_OPEN
+        CALL    BDOS
+        INR     A
+        JZ      T7FAIL
+
+        MVI     A, 127
+        STA     DFCB+33
+        XRA     A
+        STA     DFCB+34
+        STA     DFCB+35
+
+        CALL    CLRBUF
+
+        LXI     D, DFCB
+        MVI     C, F_READRAND
+        CALL    BDOS
+        ORA     A
+        JNZ     T7FAIL
+
+        ; Verify buffer contains 0x7F
+        LXI     H, BUFFER
+        MVI     B, 128
+T7VFY:
+        MOV     A, M
+        CPI     07FH
+        JNZ     T7FAIL
+        INX     H
+        DCR     B
+        JNZ     T7VFY
+
+        CALL    TPASS
+        JMP     TEST8
+
+T7FAIL:
+        CALL    TFAIL
+        LXI     D, MSG127
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ;---------------------------------------------------------------
+        ; Test 8: Extent boundary - write/read record 128 (extent 1)
+        ; This is the FIRST record of extent 1 (CR=0)
+        ; Critical test: if extent calc is wrong, this fails
+        ;---------------------------------------------------------------
+TEST8:
+        MVI     A, 8
+        STA     TESTNUM
+        LXI     D, MSG_T8
+        MVI     C, F_PRTSTR
+        CALL    BDOS
+
+        ; Open
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_OPEN
+        CALL    BDOS
+        INR     A
+        JZ      T8FAIL
+
+        ; Set record to 128 (extent=1, CR=0)
+        MVI     A, 128
+        STA     DFCB+33
+        XRA     A
+        STA     DFCB+34
+        STA     DFCB+35
+
+        ; Fill buffer with 0x80 (128)
+        LXI     H, BUFFER
+        MVI     B, 128
+        MVI     A, 080H
+T8FILL:
+        MOV     M, A
+        INX     H
+        DCR     B
+        JNZ     T8FILL
+
+        ; Write random
+        LXI     D, DFCB
+        MVI     C, F_WRITERAND
+        CALL    BDOS
+        ORA     A
+        JNZ     T8FAIL
+
+        ; Close to save
+        LXI     D, DFCB
+        MVI     C, F_CLOSE
+        CALL    BDOS
+
+        ; Reopen and read back
+        LXI     H, FCB1
+        CALL    SETFCB
+        MVI     C, F_OPEN
+        CALL    BDOS
+        INR     A
+        JZ      T8FAIL
+
+        MVI     A, 128
+        STA     DFCB+33
+        XRA     A
+        STA     DFCB+34
+        STA     DFCB+35
+
+        CALL    CLRBUF
+
+        LXI     D, DFCB
+        MVI     C, F_READRAND
+        CALL    BDOS
+        ORA     A
+        JNZ     T8FAIL
+
+        ; Verify buffer contains 0x80
+        LXI     H, BUFFER
+        MVI     B, 128
+T8VFY:
+        MOV     A, M
+        CPI     080H
+        JNZ     T8FAIL
+        INX     H
+        DCR     B
+        JNZ     T8VFY
+
+        CALL    TPASS
+        JMP     CLEANUP
+
+T8FAIL:
+        CALL    TFAIL
+        LXI     D, MSG128
         MVI     C, F_PRTSTR
         CALL    BDOS
 
@@ -640,7 +821,9 @@ MSG_T2: DB      'T2: F33 Read random rec 5... ', '$'
 MSG_T3: DB      'T3: F34 Write random rec 15... ', '$'
 MSG_T4: DB      'T4: Read back rec 15... ', '$'
 MSG_T5: DB      'T5: F36 Set random from seq... ', '$'
-MSG_T6: DB      'T6: Read unwritten rec fails... ', '$'
+MSG_T6: DB      'T6: Read unallocated block fails... ', '$'
+MSG_T7: DB      'T7: Write/read record 127 (ext 0)... ', '$'
+MSG_T8: DB      'T8: Write/read record 128 (ext 1)... ', '$'
 
 MSGOK:  DB      'OK', CR, LF, '$'
 MSGNG:  DB      'NG', CR, LF, '$'
@@ -652,6 +835,8 @@ MSGRDAA: DB     'Read back failed', CR, LF, '$'
 MSGSR3: DB      'Set random != 3', CR, LF, '$'
 MSGUNWR: DB     'Should fail on unwritten', CR, LF, '$'
 MSGOPEN: DB     'Open failed', CR, LF, '$'
+MSG127: DB      'Record 127 failed', CR, LF, '$'
+MSG128: DB      'Record 128 failed', CR, LF, '$'
 
 MSGSUMM: DB     CR, LF, 'Summary: ', '$'
 MSGOF:  DB      ' of ', '$'

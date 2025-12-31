@@ -143,25 +143,32 @@ F15LP:  CALL    SEARCH          ; Find filename match
 Random read/write uses RNDREC to convert the 24-bit random record number (FCB+33,34,35) to extent and CR:
 
 1. **CR (Current Record)** = R0 AND 7Fh (low 7 bits)
-2. **Extent** = (R1:R0) / 128 (bits 11:7)
+2. **Extent** = (R1:R0) / 128 = (R1 << 1) | (R0 >> 7)
+
+**RNDREC Implementation**: The extent calculation extracts bits 14:7 of the 16-bit record number:
+```asm
+; extent = (R1 << 1) | (R0 >> 7)
+MOV     A, E            ; A = R0
+RLC                     ; Bit 7 of R0 → carry
+MOV     A, D            ; A = R1
+RAL                     ; (R1 << 1) | carry = extent
+ANI     1FH             ; Mask to 5 bits (extents 0-31)
+```
+
+**Pitfall**: Do NOT use multiple RRC/RAR iterations to divide by 128. RRC is a **circular rotate** (bit 0 → bit 7 AND carry), not a logical shift. This produces incorrect results.
 
 RNDREC sets FCB+12 (extent) and FCB+32 (CR), then the caller:
 - **FUNC33** loads CR and calls READREC
 - **FUNC34** loads CR and calls WRITEREC
 
 **Important**: After calling RNDREC, the record number is in FCB+32, NOT in A. READREC/WRITEREC expect the record in A:
-```
+```asm
 LHLD    CURFCB
 LXI     D, 32
 DAD     D
 MOV     A, M            ; A = CR from FCB+32
 CALL    READREC         ; or WRITEREC
 ```
-
-### Known Limitations
-
-- Random write beyond current file size (e.g., writing to record 15 when file has 10 records) may fail if the required block is not yet in the FCB allocation map
-- This is a TODO for future improvement - need to re-open the extent or create a new one as needed
 
 ## Related
 - [filesystem.md](filesystem.md) - FCB structure and directory format

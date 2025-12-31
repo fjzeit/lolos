@@ -2147,49 +2147,16 @@ RNDREC:
         INX     H
         MOV     D, M            ; R1
         ; Record = R1:R0, extent = record / 128, CR = record mod 128
+        ; CR = R0 AND 7FH (low 7 bits)
         MOV     A, E
         ANI     7FH
         PUSH    PSW             ; Save CR
-        MOV     A, E
-        RRC
-        MOV     E, A
-        MOV     A, D
-        RAR
-        MOV     D, A
-        ; Repeat 6 more times for /128
-        MOV     A, E
-        RRC
-        MOV     E, A
-        MOV     A, D
-        RAR
-        MOV     D, A
-        MOV     A, E
-        RRC
-        MOV     E, A
-        MOV     A, D
-        RAR
-        MOV     D, A
-        MOV     A, E
-        RRC
-        MOV     E, A
-        MOV     A, D
-        RAR
-        MOV     D, A
-        MOV     A, E
-        RRC
-        MOV     E, A
-        MOV     A, D
-        RAR
-        MOV     D, A
-        MOV     A, E
-        RRC
-        MOV     E, A
-        MOV     A, D
-        RAR
-        MOV     D, A
-        MOV     A, E
-        RRC
-        ANI     1FH             ; Extent = bits 11:7
+        ; Extent = (R1 << 1) | (R0 >> 7) = bits 14:7 of record
+        MOV     A, E            ; A = R0
+        RLC                     ; Bit 7 of R0 → carry
+        MOV     A, D            ; A = R1
+        RAL                     ; (R1 << 1) | carry = extent
+        ANI     1FH             ; Mask to 5 bits (extents 0-31)
         ; Store extent
         LHLD    CURFCB
         PUSH    D
