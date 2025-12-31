@@ -1,0 +1,100 @@
+name: Build and Test LOLOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  ZMAC_REPO: https://github.com/gp48k/zmac.git
+  ZMAC_VERSION: master
+  Z80PACK_REPO: https://github.com/udo-munk/z80pack.git
+  Z80PACK_VERSION: "1.37"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout LOLOS
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex cpmtools
+
+      # --- zmac assembler ---
+      - name: Cache zmac
+        uses: actions/cache@v4
+        id: cache-zmac
+        with:
+          path: tools/zmac
+          key: zmac-${{ env.ZMAC_VERSION }}-${{ runner.os }}
+
+      - name: Build zmac
+        if: steps.cache-zmac.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 ${{ env.ZMAC_REPO }} /tmp/zmac
+          cd /tmp/zmac/src
+          make
+          cp zmac $GITHUB_WORKSPACE/tools/zmac
+
+      - name: Verify zmac
+        run: |
+          chmod +x tools/zmac
+          tools/zmac --version || true
+
+      # --- z80pack emulator ---
+      - name: Cache z80pack
+        uses: actions/cache@v4
+        id: cache-z80pack
+        with:
+          path: ~/z80pack
+          key: z80pack-${{ env.Z80PACK_VERSION }}-${{ runner.os }}
+
+      - name: Build z80pack
+        if: steps.cache-z80pack.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch ${{ env.Z80PACK_VERSION }} ${{ env.Z80PACK_REPO }} ~/z80pack
+          cd ~/z80pack/cpmsim/srcsim
+          make -f Makefile.linux
+          cd ../srctools
+          make -f Makefile.linux
+
+      - name: Verify z80pack
+        run: ~/z80pack/cpmsim/cpmsim -h || true
+
+      # --- Build LOLOS ---
+      - name: Assemble LOLOS
+        run: |
+          ./tools/zmac -8 --od src/boot --oo cim,lst src/boot/boot.asm
+          ./tools/zmac -8 --od src/bios --oo cim,lst src/bios/bios.asm
+          ./tools/zmac -8 --od src/bdos --oo cim,lst src/bdos/bdos.asm
+          ./tools/zmac -8 --od src/ccp --oo cim,lst src/ccp/ccp.asm
+
+      - name: Create disk image
+        run: python3 tools/mkdisk.py
+
+      - name: Verify disk image
+        run: |
+          ls -la drivea.dsk
+          file drivea.dsk
+
+      # --- Run tests ---
+      - name: Run tests
+        run: python3 tests/run_tests.py -v
+
+      # --- Upload artifacts ---
+      - name: Upload disk image
+        uses: actions/upload-artifact@v4
+        with:
+          name: lolos-disk
+          path: drivea.dsk
+
+      - name: Upload listing files
+        uses: actions/upload-artifact@v4
+        with:
+          name: lolos-listings
+          path: src/**/*.lst
