@@ -150,6 +150,7 @@ class CpmTester:
             "trandom",
             "tattrib",
             "tiobyte",
+            "tconch",
         ]
 
         for prog in test_programs:
@@ -214,6 +215,7 @@ class CpmTester:
             "trandom.com",
             "tattrib.com",
             "tiobyte.com",
+            "tconch.com",
         ]
         for test_name in unit_tests:
             test_path = PROJECT_ROOT / "tests" / "programs" / test_name
@@ -258,21 +260,28 @@ class CpmTester:
         finally:
             temp_path.unlink()
 
-    def run_cpmsim(self, commands: list[str], timeout: int = 10) -> tuple[bool, str]:
+    def run_cpmsim(self, commands: list[str], timeout: int = 10,
+                    program_input: str = "") -> tuple[bool, str]:
         """
-        Run cpmsim with scripted commands.
+        Run cpmsim with scripted commands and optional program input.
 
         Args:
             commands: List of CP/M commands to execute
             timeout: Maximum time to wait (seconds)
+            program_input: Raw input data for programs to read via F1/F6/F10.
+                          This is appended after commands, so the program receives
+                          it when it reads from console.
 
         Returns:
             (success, output) tuple
         """
         self.log(f"Running commands: {commands}")
+        if program_input:
+            self.log(f"Program input: {repr(program_input)}")
 
         # Build command string with actual newlines
-        cmd_input = "\n".join(commands) + "\n"
+        # Commands are separated by newlines, then program_input is appended
+        cmd_input = "\n".join(commands) + "\n" + program_input
 
         try:
             if IS_WINDOWS:
@@ -628,6 +637,22 @@ def test_iobyte(tester: CpmTester):
     return False, "IOBYTE tests failed", output
 
 
+def test_conch(tester: CpmTester):
+    """Test console character I/O (F1, F2) with input injection"""
+    # F1 tests expect 'A' then 'B' to be read from console
+    # We inject these after the TCONCH command
+    success, output = tester.run_cpmsim(["TCONCH"], timeout=10,
+                                         program_input="AB")
+
+    if not success:
+        return False, output, output
+
+    if "PASS" in output:
+        return True, "Console I/O tests passed", output
+
+    return False, "Console I/O tests failed", output
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -677,6 +702,7 @@ def main():
         ("random", lambda: test_random(tester)),
         ("attrib", lambda: test_attrib(tester)),
         ("iobyte", lambda: test_iobyte(tester)),
+        ("conch", lambda: test_conch(tester)),
     ]
 
     # Filter tests if specific test requested

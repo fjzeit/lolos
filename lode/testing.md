@@ -49,7 +49,7 @@ flowchart TD
 4. **Execute**: Pipes commands to cpmsim via stdin
 5. **Verify**: Checks output for expected patterns
 
-### Current Tests (16 total)
+### Current Tests (17 total)
 
 | Test | Program | Description | BDOS Functions Tested |
 |------|---------|-------------|----------------------|
@@ -66,11 +66,12 @@ flowchart TD
 | disk_mgmt | tdisk.asm | Disk management | F13, F14, F24, F25, F27, F29, F31, F37 |
 | search | tsearch.asm | Directory search | F17, F18 |
 | user | tuser.asm | User number | F32 |
-| random | trandom.asm | Random access | F33, F34, F35, F36 |
+| random | trandom.asm | Random access | F33, F34, F35, F36, F40 |
 | attrib | tattrib.asm | File attributes | F30 |
 | iobyte | tiobyte.asm | IOBYTE and write protect | F7, F8, F28 |
+| conch | tconch.asm | Console character I/O | F1, F2 |
 
-**Status**: 15/16 tests pass. Random access test has 4/6 subtests passing (read random, file size, set random from seq work; write random beyond file size is a known limitation)
+**Status**: 17/17 tests pass
 
 ### Test Programs (tests/programs/*.asm)
 
@@ -87,6 +88,7 @@ flowchart TD
 | trandom.asm | Random access read/write/size/setrandom |
 | tattrib.asm | File attributes (read-only, system, archive) |
 | tiobyte.asm | IOBYTE and write protect operations |
+| tconch.asm | Console character I/O - F1 input with echo, F2 output |
 
 All test programs follow the same pattern:
 1. Print test header
@@ -130,6 +132,24 @@ all_tests = [
     ("example", lambda: test_example(tester)),
 ]
 ```
+
+### Input Injection for Console Tests
+
+Tests for console input functions (F1, F6, F10) require injecting characters that the program will read. The `program_input` parameter appends raw data after commands:
+
+```python
+def test_console_input(tester: CpmTester):
+    """Test that reads input via F1"""
+    # TCONCH command runs the program
+    # "AB" is what F1 will read (first call gets 'A', second gets 'B')
+    success, output = tester.run_cpmsim(["TCONCH"], timeout=10,
+                                         program_input="AB")
+    if "PASS" in output:
+        return True, "Console input test passed", output
+    return False, "Console input test failed", output
+```
+
+**How it works**: All stdin flows through BIOS CONIN. CCP reads the command, then when the program calls F1/F6/F10, it reads the remaining stdin bytes.
 
 ### Dependencies
 
