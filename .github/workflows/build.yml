@@ -60,8 +60,6 @@ jobs:
           git clone --depth 1 --branch ${{ env.Z80PACK_VERSION }} ${{ env.Z80PACK_REPO }} ~/z80pack
           cd ~/z80pack/cpmsim/srcsim
           make -f Makefile.linux
-          cd ../srctools
-          make -f Makefile.linux
 
       - name: Verify z80pack
         run: ~/z80pack/cpmsim/cpmsim -h || true
