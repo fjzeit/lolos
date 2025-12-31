@@ -141,6 +141,7 @@ class CpmTester:
 
         # List of test programs to build
         test_programs = [
+            "hello",
             "fileio",
             "bigfile",
             "tversion",
@@ -202,7 +203,7 @@ class CpmTester:
         self.log(f"Deployed disk to {dst}")
 
         # Add hello.com test program if it exists
-        hello_com = PROJECT_ROOT / "src" / "hello" / "hello.com"
+        hello_com = PROJECT_ROOT / "tests" / "programs" / "hello.com"
         if hello_com.exists():
             self.add_file_to_disk(hello_com, "HELLO.COM")
 
