@@ -77,6 +77,16 @@
 - [ ] Fix compatibility issues
 
 ### Known Issues to Address
+
+**HIGH PRIORITY - Test Failure:**
+- [ ] **FUNC34 random write beyond file size fails** (trandom.asm T3/T4)
+  - Writing to record 15 on a 10-record file returns error
+  - Block D1 should be allocated (records 8-9 use it) but write fails
+  - Likely cause: RNDREC doesn't reload allocation map from directory after OPEN
+  - Need to trace why GETBLOCK returns 0 or BWRITE fails
+  - This is blocking 100% test pass rate (currently 15/16)
+
+Other issues:
 - Warm boot doesn't reload CCP/BDOS from disk (uses memory copy)
 
 ## Toolchain
