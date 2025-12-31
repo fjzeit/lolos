@@ -73,10 +73,11 @@ jobs:
       # --- Build LOLOS ---
       - name: Assemble LOLOS
         run: |
-          ./tools/zmac -8 --od src/boot --oo cim,lst src/boot/boot.asm
-          ./tools/zmac -8 --od src/bios --oo cim,lst src/bios/bios.asm
-          ./tools/zmac -8 --od src/bdos --oo cim,lst src/bdos/bdos.asm
-          ./tools/zmac -8 --od src/ccp --oo cim,lst src/ccp/ccp.asm
+          mkdir -p build
+          ./tools/zmac -8 --od build --oo cim,lst src/boot.asm
+          ./tools/zmac -8 --od build --oo cim,lst src/bios.asm
+          ./tools/zmac -8 --od build --oo cim,lst src/bdos.asm
+          ./tools/zmac -8 --od build --oo cim,lst src/ccp.asm
 
       - name: Create disk image
         run: python3 tools/mkdisk.py
@@ -101,4 +102,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lolos-listings
-          path: src/**/*.lst
+          path: build/*.lst
