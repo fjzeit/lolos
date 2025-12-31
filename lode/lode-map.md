@@ -3,7 +3,7 @@
 ## Root
 - [summary.md](summary.md) - Project overview
 - [terminology.md](terminology.md) - Domain vocabulary
-- [practices.md](practices.md) - Development patterns
+- [practices.md](practices.md) - Development patterns and lessons learned
 - [testing.md](testing.md) - Test harness and automation
 
 ## CP/M Architecture
@@ -14,6 +14,4 @@
 - [cpm/filesystem.md](cpm/filesystem.md) - Directory structure and FCBs
 
 ## Plans
-- [plans/roadmap.md](plans/roadmap.md) - Implementation phases
-- [plans/handover.md](plans/handover.md) - Session handover for Linux testing
-- [plans/test-coverage.md](plans/test-coverage.md) - BDOS test coverage enhancement (18 phases)
+- [plans/roadmap.md](plans/roadmap.md) - Current state and future work

@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-Automated test harness for verifying CP/M functionality.
+Automated test harness for verifying LOLOS CP/M 2.2 compatibility.
 
 ## Test Harness
 
@@ -193,15 +193,9 @@ GitHub Actions workflow at `.github/workflows/build.yml`:
 
 5. **Upload artifacts**: `drivea.dsk` and listing files
 
-### Known Issues
-
-- Test duration ~7 minutes due to cpmsim timeout handling
-- cpmsim doesn't exit when stdin closes, so each test waits for timeout
-- Batch mode optimization shelved for future work
-
 ## Compatibility Testing
 
-Third-party CP/M software tested on Lolos:
+Third-party CP/M software tested on LOLOS:
 
 | Software | Version | Status | Notes |
 |----------|---------|--------|-------|
