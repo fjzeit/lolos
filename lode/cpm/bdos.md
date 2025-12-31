@@ -81,7 +81,7 @@ The SEARCH function maintains state in `SEARCHI` (next entry to search from) to 
 - FUNC17 (Search First) - resets SEARCHI, then falls through to FUNC18
 - FUNC18 (Search Next) - continues from SEARCHI (no reset)
 - FUNC19 (Delete) - resets SEARCHI for loop
-- FUNC23 (Rename) - resets SEARCHI for loop
+- FUNC23 (Rename) - resets SEARCHI for loop. **Bug fixed**: copy direction was FROM dir TO FCB instead of FCB TO dir
 - FUNC30 (Set Attributes) - must reset SEARCHI
 - RNDREC (Random access) - must reset SEARCHI before extent search
 

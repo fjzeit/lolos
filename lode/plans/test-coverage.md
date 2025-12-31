@@ -19,12 +19,13 @@ Comprehensive test coverage for all 38 BDOS functions (F0-F40, excluding F0/warm
 | 10 | File Delete (F19) | ✅ Complete |
 | 11 | Sequential I/O (F20, F21) | ✅ Complete |
 | 12 | File Create (F22) | ✅ Complete |
-| 13-18 | Remaining phases | Pending |
+| 13 | File Rename (F23) | ✅ Complete |
+| 14-18 | Remaining phases | Pending |
 
 ### Current Coverage Summary
 - **Console I/O (F1-F11):** 11/11 tested ✅ All console functions covered
-- **Disk/File (F12-F40):** 29/27 tested ✅ F15, F16, F19, F20, F21, F22 now covered
-- **Missing dedicated tests:** F23, F26
+- **Disk/File (F12-F40):** 26/27 tested ✅ Only F26 (DMA address) lacks dedicated test
+- **Missing dedicated tests:** F26
 
 ### Test Program Pattern
 All tests follow the standard structure in `tests/programs/`:
@@ -328,24 +329,27 @@ All tests follow the standard structure in `tests/programs/`:
 ---
 
 ## Phase 13: File Rename (F23)
-**New file:** `tests/programs/trename.asm`
+**File:** `tests/programs/trename.asm` ✅
 
 ### Functions
 | Fn | Name | Description |
 |----|------|-------------|
 | F23 | F_RENAME | Rename file(s) |
 
-### Test Cases
-1. **T1:** Rename existing file
-2. **T2:** Rename non-existent file (expect FFH)
-3. **T3:** Rename to existing name (behavior check)
-4. **T4:** Rename with wildcard (multiple files)
-5. **T5:** Rename multi-extent file (all extents renamed)
-6. **T6:** Verify old name gone, new name present via search
+### Implemented Tests (8 total)
+1. **T1:** F23 Rename existing file ✅
+2. **T2:** Verify new name exists ✅
+3. **T3:** Rename non-existent (no crash) ✅
+4. **T4:** Rename to same name ✅
+5. **T5:** Rename one file, others intact ✅
+6. **T6:** Rename back and forth ✅
+7. **T7:** Change extension ✅
+8. **T8:** Open renamed file ✅
 
 ### Implementation Notes
 - FCB format: bytes 1-11 = old name, bytes 17-27 = new name
-- Critical gap - only CCP REN command tested currently
+- Fixed BDOS bug: F23 was copying in wrong direction (from dir to FCB instead of FCB to dir)
+- Creates REN1-6.TST test files (cleaned up after)
 
 ---
 
@@ -470,7 +474,7 @@ All tests follow the standard structure in `tests/programs/`:
 - `tests/programs/tdelete.asm` (Phase 10) ✅
 - `tests/programs/tseqio.asm` (Phase 11) ✅
 - `tests/programs/tmake.asm` (Phase 12) ✅
-- `tests/programs/trename.asm` (Phase 13)
+- `tests/programs/trename.asm` (Phase 13) ✅
 - `tests/programs/tdma.asm` (Phase 14)
 - `tests/programs/talloc.asm` (Phase 15, optional)
 

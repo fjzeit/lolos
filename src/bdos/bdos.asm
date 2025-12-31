@@ -1567,15 +1567,13 @@ F23LP:
         CALL    SEARCH
         CPI     0FFH
         JZ      F23DN
-        ; Rename: copy new name from FCB+16 to directory entry
+        ; Rename: copy new name from FCB+17 to directory entry
         CALL    GETDIRENT
         INX     H               ; Skip user number
-        PUSH    H               ; Save dest pointer
+        XCHG                    ; DE = dest (dir entry + 1)
         LHLD    CURFCB
-        LXI     D, 17           ; New name at FCB+17
-        DAD     D
-        XCHG                    ; DE = new name
-        POP     H               ; HL = dest
+        LXI     B, 17           ; New name at FCB+17
+        DAD     B               ; HL = source (FCB+17)
         MVI     B, 11           ; Copy filename+type
         CALL    COPYB
         CALL    WRITEDIR

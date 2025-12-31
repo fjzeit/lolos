@@ -49,7 +49,7 @@ flowchart TD
 4. **Execute**: Pipes commands to cpmsim via stdin
 5. **Verify**: Checks output for expected patterns
 
-### Current Tests (24 total)
+### Current Tests (25 total)
 
 | Test | Program | Description | BDOS Functions Tested |
 |------|---------|-------------|----------------------|
@@ -77,8 +77,9 @@ flowchart TD
 | delete | tdelete.asm | File delete (8 tests) | F19 |
 | seqio | tseqio.asm | Sequential I/O (8 tests) | F20, F21 |
 | make | tmake.asm | File create (8 tests) | F22 |
+| rename | trename.asm | File rename (8 tests) | F23 |
 
-**Status**: 24/24 tests pass
+**Status**: 25/25 tests pass
 
 ### Test Programs (tests/programs/*.asm)
 
@@ -103,6 +104,7 @@ flowchart TD
 | tdelete.asm | File delete - single, wildcard, verification (8 tests) |
 | tseqio.asm | Sequential I/O - CR increment, EOF, extent transitions (8 tests) |
 | tmake.asm | File create - FCB initialization, persistence, duplicates (8 tests) |
+| trename.asm | File rename - FCB format, extension change, verification (8 tests) |
 
 All test programs follow the same pattern:
 1. Print test header
