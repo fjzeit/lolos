@@ -870,6 +870,15 @@ DIRLP:
         POP     H
         JNZ     DIRNXT          ; Skip system files
 
+        ; Check if extent 0 (only show first extent of each file)
+        PUSH    H
+        LXI     D, 12           ; Offset to extent byte
+        DAD     D
+        MOV     A, M
+        POP     H
+        ORA     A
+        JNZ     DIRNXT          ; Skip non-zero extents
+
         ; Print filename
         INX     H               ; Skip user byte
         PUSH    B

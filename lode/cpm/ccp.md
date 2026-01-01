@@ -32,13 +32,33 @@ flowchart TD
 
 | Command | Description |
 |---------|-------------|
-| `dir [filespec]` | List directory |
+| `dir [filespec]` | List directory (extent 0 entries only) |
 | `era filespec` | Erase files (wildcards allowed) |
 | `ren new=old` | Rename file |
 | `save n file` | Save n pages from TPA to file |
 | `type file` | Display text file |
 | `user n` | Switch user area (0-15) |
 | `d:` | Change current drive |
+
+## DIR Command Implementation
+
+The DIR command uses BDOS Search First/Next (F17/F18) to enumerate directory entries. Key filtering:
+
+1. **System files**: Skip entries where T2 (byte 10) has high bit set
+2. **Extent filtering**: Only show extent 0 entries (byte 12 = 0)
+
+The extent filter prevents multi-extent files (>16K) from appearing multiple times. Without it, a 25K file with 2 extents would show twice in DIR output.
+
+```asm
+        ; Check if extent 0 (only show first extent of each file)
+        PUSH    H
+        LXI     D, 12           ; Offset to extent byte
+        DAD     D
+        MOV     A, M
+        POP     H
+        ORA     A
+        JNZ     DIRNXT          ; Skip non-zero extents
+```
 
 ## Command Line Parsing
 

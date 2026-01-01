@@ -100,6 +100,18 @@ RDCMD reads characters into DBUFF but must add a null terminator after the copy 
 ### CCP DIR Command Wildcard Handling
 CMDDIR must scan DBUFF for arguments after the command name, not check DFCB. PARSE puts the command name ("DIR") in DFCB, so checking `DFCB+1 == ' '` fails.
 
+### CCP DIR Must Filter by Extent Number
+DIR uses BDOS Search (F17/F18) which returns ALL directory entries including extent 1, 2, etc. for multi-extent files. DIR must check byte 12 (extent) and skip non-zero entries:
+```asm
+        ; Check if extent 0 (only show first extent of each file)
+        LXI     D, 12           ; Offset to extent byte
+        DAD     D
+        MOV     A, M
+        ORA     A
+        JNZ     DIRNXT          ; Skip non-zero extents
+```
+Without this, a 25K file (2 extents) appears twice in DIR output.
+
 ### BDOS SEARCH State (SEARCHI) Must Be Reset
 SEARCH maintains `SEARCHI` to support FUNC17+FUNC18 multi-call searches. Any function that starts a new independent search MUST reset SEARCHI to 0:
 ```asm
