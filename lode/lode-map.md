@@ -15,6 +15,3 @@
 
 ## Plans
 - [plans/roadmap.md](plans/roadmap.md) - Current state and future work
-
-## Temporary / Investigation
-- [tmp/bigfile-issue.md](tmp/bigfile-issue.md) - DIR corruption after multi-extent file I/O

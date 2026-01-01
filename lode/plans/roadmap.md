@@ -29,4 +29,4 @@ LOLOS is fully operational with all 27 automated tests passing.
 - Test duration ~7 minutes due to cpmsim timeout handling (cpmsim doesn't exit when stdin closes)
 
 ### Known Issues
-- DIR shows corrupted filenames after running BIGFILE (multi-extent file I/O) in same session. Disk is correct; workaround is warm boot. See [tmp/bigfile-issue.md](../tmp/bigfile-issue.md).
+None currently.

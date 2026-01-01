@@ -104,6 +104,10 @@ CCPRET:
         LDA     CDISK
         ANI     0FH
         STA     CURDSK
+        ; Reset DMA to DBUFF - transient programs may leave it pointing elsewhere
+        LXI     D, DBUFF
+        MVI     C, B_SETDMA
+        CALL    ENTRY
 
 ; CCPLP - Main command loop
 ; Prompts, reads command, parses, and executes

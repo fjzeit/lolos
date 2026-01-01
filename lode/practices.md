@@ -129,6 +129,17 @@ When SEARCH finds a match, it must save the directory entry pointer for later us
         SHLD    DIRPTR          ; Save for OPEN/CLOSE
 ```
 
+### CCP Must Reset DMA After Transient Programs
+Transient programs may set DMA to their own buffers and not restore it. CCPRET must reset DMA to DBUFF (0080h) before built-in commands run, otherwise FUNC18 copies directory data to the wrong address:
+```asm
+CCPRET:
+        ...
+        ; Reset DMA to DBUFF - transient programs may leave it pointing elsewhere
+        LXI     D, DBUFF
+        MVI     C, B_SETDMA
+        CALL    ENTRY
+```
+
 ### Register Preservation Contracts
 - BDOS entry does XCHG which corrupts caller's HL
 - CCP utilities (OUTCHR, BDOSCL) should preserve HL/BC internally
