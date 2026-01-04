@@ -79,10 +79,14 @@ CCPENT:
         MOV     A, C
         ANI     0FH             ; Mask drive number
         STA     CURDSK
+        PUSH    PSW             ; Save drive number
 
         ; Reset disk system (initializes BDOS variables including user number)
         MVI     C, B_RESET
         CALL    ENTRY
+
+        POP     PSW
+        STA     CDISK           ; Restore CDISK after reset
 
 ;-------------------------------------------------------------------------------
 ; CCPRET - Re-entry point after transient program
